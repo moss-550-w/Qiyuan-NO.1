@@ -1,0 +1,103 @@
+[gd_scene load_steps=3 format=3 uid="uid://cmanualpanel01"]
+
+[ext_resource type="Script" path="res://scripts/ui/ManualPanel.gd" id="1_mp"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_win"]
+bg_color = Color(0.0470588, 0.0627451, 0.117647, 0.988235)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.168627, 0.835294, 1, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="ManualPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mp")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Window" type="Panel" parent="Center"]
+custom_minimum_size = Vector2(1160, 720)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_win")
+
+[node name="Margin" type="MarginContainer" parent="Center/Window"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="Center/Window/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="Center/Window/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Center/Window/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "运行手册"
+theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="BtnClose" type="Button" parent="Center/Window/Margin/VBox/Header"]
+custom_minimum_size = Vector2(100, 38)
+layout_mode = 2
+text = "关闭 ✕"
+
+[node name="Tabs" type="HBoxContainer" parent="Center/Window/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Search" type="LineEdit" parent="Center/Window/Margin/VBox"]
+layout_mode = 2
+placeholder_text = "搜索关键词（按当前板块内容检索）…"
+clear_button_enabled = true
+
+[node name="Body" type="HBoxContainer" parent="Center/Window/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="List" type="ItemList" parent="Center/Window/Margin/VBox/Body"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+
+[node name="Detail" type="RichTextLabel" parent="Center/Window/Margin/VBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+scroll_active = true
+theme_override_colors/default_color = Color(0.85, 0.89, 0.94, 1)
+theme_override_font_sizes/normal_font_size = 17

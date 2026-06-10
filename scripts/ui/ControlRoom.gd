@@ -9,9 +9,11 @@ extends Control
 const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
 const TOKEN_SCENE := preload("res://scenes/components/BudgetToken.tscn")
 const BRIEFING_SCENE := preload("res://scenes/components/BriefingCard.tscn")
+const MANUAL_SCENE := preload("res://scenes/panels/ManualPanel.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
 @onready var _title: Label = $Root/Main/Header/Title
+@onready var _btn_manual: Button = $Root/Main/Header/BtnManual
 @onready var _btn_submit: Button = $Root/Main/Header/BtnSubmit
 @onready var _btn_back: Button = $Root/Main/Header/BtnBack
 @onready var _info: RichTextLabel = $Root/Main/InfoLabel
@@ -28,15 +30,33 @@ var _zones: Array[DropZone] = []
 var _part_labels: Dictionary = {}     # part_id → 显示名
 var _actual: Dictionary = {"q": 1.0, "stability": 1.0, "fuel": 1.0}
 var _predicting: bool = false
+var _manual: ManualPanel = null
 
 
 func _ready() -> void:
 	GameState.reset(SaveManager.settings.get("difficulty", "novice"))
 	_btn_back.pressed.connect(_on_back)
 	_btn_submit.pressed.connect(_on_submit)
+	_btn_manual.pressed.connect(_on_manual)
+	_manual = MANUAL_SCENE.instantiate()
+	add_child(_manual)
 	_build_gauges()
 	_wire_zones()
 	_start_round(1)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# H 键随时唤出/收起运行手册
+	if event is InputEventKey and event.pressed and not event.echo \
+			and event.keycode == KEY_H:
+		_on_manual()
+		get_viewport().set_input_as_handled()
+
+
+func _on_manual() -> void:
+	AudioManager.play("ui_click")
+	if _manual:
+		_manual.toggle()
 
 
 func _process(_dt: float) -> void:
