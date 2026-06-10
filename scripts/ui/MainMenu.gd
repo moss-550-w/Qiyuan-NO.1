@@ -76,5 +76,4 @@ func _inject_fake_data() -> void:
 
 func _on_start_pressed() -> void:
 	AudioManager.play("ui_click")
-	# ControlRoom 主场景将在 D1-D2 落地，此处先占位提示
-	_status.text += "\n[color=#2bd6ff]→ 即将进入中控台（ControlRoom 开发中）[/color]"
+	get_tree().change_scene_to_file("res://scenes/control_room/ControlRoom.tscn")
