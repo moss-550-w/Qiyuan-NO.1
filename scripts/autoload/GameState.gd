@@ -149,6 +149,7 @@ func to_save_dict() -> Dictionary:
 ## 从存档字典恢复状态
 func from_save_dict(d: Dictionary) -> void:
 	difficulty = d.get("difficulty", "novice")
+	total_budget = int(DataManager.get_difficulty(difficulty).get("total_budget", 100))
 	current_round = int(d.get("current_round", 0))
 	q_value = float(d.get("q_value", 1.0))
 	stability = float(d.get("stability", 1.0))

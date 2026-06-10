@@ -1,16 +1,20 @@
 extends Control
-## MainMenu —— 主菜单 + 启动自检 + 数据流验证
+## MainMenu —— 主菜单 + 启动自检 + 难度选择 + 续档入口
 ##
 ## 职责：
-## 1. 显示 DataManager 启动加载结果（自检面板），配置异常时直观暴露问题。
-## 2. 用 rounds.json 的 gauge 配置实例化一排 Gauge，并注入假数据，验证数据流通。
-## 3. 提供开始/难度入口（后续接 ControlRoom 主场景）。
+## 1. 启动自检面板：显示配置加载结果与已解锁成就统计。
+## 2. 新游戏 / 继续游戏（存档存在时）/ 难度切换。
+## 3. 用 rounds.json 的 gauge 配置实例化一排 Gauge 并注入假数据，验证数据流。
 
 const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
+const CONTROL_ROOM := "res://scenes/control_room/ControlRoom.tscn"
+const DIFFICULTY_CYCLE := ["novice", "chief", "custom"]
 
 @onready var _status: RichTextLabel = $Center/Panel/Margin/VBox/StatusLabel
 @onready var _gauge_row: HBoxContainer = $Center/Panel/Margin/VBox/GaugeRow
+@onready var _btn_continue: Button = $Center/Panel/Margin/VBox/Buttons/BtnContinue
 @onready var _btn_start: Button = $Center/Panel/Margin/VBox/Buttons/BtnStart
+@onready var _btn_difficulty: Button = $Center/Panel/Margin/VBox/Buttons/BtnDifficulty
 @onready var _btn_refresh: Button = $Center/Panel/Margin/VBox/Buttons/BtnRefresh
 
 var _gauges: Array[Gauge] = []
@@ -18,22 +22,27 @@ var _gauges: Array[Gauge] = []
 
 func _ready() -> void:
 	_btn_start.pressed.connect(_on_start_pressed)
+	_btn_continue.pressed.connect(_on_continue_pressed)
+	_btn_difficulty.pressed.connect(_on_cycle_difficulty)
 	_btn_refresh.pressed.connect(_run_self_check)
 	_run_self_check()
 
 
-## 启动自检：检查 DataManager 状态并构建仪表演示
+## 启动自检：检查 DataManager 状态、构建仪表演示、刷新按钮状态
 func _run_self_check() -> void:
 	_show_status()
 	_build_gauges()
 	_inject_fake_data()
+	_update_buttons()
 
 
-## 显示数据加载结果
+## 显示数据加载结果与成就统计
 func _show_status() -> void:
 	if DataManager.is_ready:
-		_status.text = "[color=#4ed36a]● 配置自检通过[/color]  已加载 %d 份配置，数据流正常。" % \
-			DataManager.DATA_FILES.size()
+		var unlocked: int = SaveManager.get_unlocked().size()
+		_status.text = "[color=#4ed36a]● 配置自检通过[/color]  已加载 %d 份配置，数据流正常。\n已解锁结局成就：[color=#f5c63f]%d / 12[/color]" % [
+			DataManager.DATA_FILES.size(), unlocked
+		]
 		_btn_start.disabled = false
 	else:
 		var lines := "[color=#e64040]● 配置自检失败[/color]  共 %d 个问题：\n" % \
@@ -42,6 +51,14 @@ func _show_status() -> void:
 			lines += "  · %s\n" % e
 		_status.text = lines
 		_btn_start.disabled = true
+
+
+## 刷新续档与难度按钮
+func _update_buttons() -> void:
+	_btn_continue.disabled = not SaveManager.has_save()
+	var diff: String = SaveManager.settings.get("difficulty", "novice")
+	var label: String = DataManager.get_difficulty(diff).get("label", diff)
+	_btn_difficulty.text = "难度：%s" % label
 
 
 ## 用 rounds.json 的 gauge 定义构建一排仪表
@@ -70,10 +87,33 @@ func _inject_fake_data() -> void:
 	for gauge in _gauges:
 		var cfg: Dictionary = gauges_def.get(gauge.gauge_id, {})
 		var base: float = float(cfg.get("base", 1.0))
-		# 制造 -8% 偏移演示告警着色
 		gauge.set_reading(base * 0.92)
 
 
+# ---------------------------------------------------------------------------
+# 入口
+# ---------------------------------------------------------------------------
+
 func _on_start_pressed() -> void:
 	AudioManager.play("ui_click")
-	get_tree().change_scene_to_file("res://scenes/control_room/ControlRoom.tscn")
+	# 新局：清空旧状态，按当前难度初始化（current_round 归零 → ControlRoom 走新局分支）
+	GameState.reset(SaveManager.settings.get("difficulty", "novice"))
+	get_tree().change_scene_to_file(CONTROL_ROOM)
+
+
+func _on_continue_pressed() -> void:
+	if not SaveManager.has_save():
+		return
+	AudioManager.play("ui_click")
+	SaveManager.load_game()
+	get_tree().change_scene_to_file(CONTROL_ROOM)
+
+
+func _on_cycle_difficulty() -> void:
+	AudioManager.play("ui_click")
+	var cur: String = SaveManager.settings.get("difficulty", "novice")
+	var idx: int = DIFFICULTY_CYCLE.find(cur)
+	var nxt: String = DIFFICULTY_CYCLE[(idx + 1) % DIFFICULTY_CYCLE.size()]
+	SaveManager.settings["difficulty"] = nxt
+	SaveManager.save_settings()
+	_update_buttons()

@@ -42,6 +42,8 @@ func load_game() -> bool:
 	var cfg := ConfigFile.new()
 	if cfg.load(SAVE_PATH) != OK:
 		return false
+	if not cfg.has_section("game"):
+		return false
 	var d := {}
 	for key in cfg.get_section_keys("game"):
 		d[key] = cfg.get_value("game", key)
@@ -74,6 +76,8 @@ func save_settings() -> void:
 func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) != OK:
+		return
+	if not cfg.has_section("settings"):
 		return
 	for key in cfg.get_section_keys("settings"):
 		settings[key] = cfg.get_value("settings", key)

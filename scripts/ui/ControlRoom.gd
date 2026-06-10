@@ -10,9 +10,11 @@ const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
 const TOKEN_SCENE := preload("res://scenes/components/BudgetToken.tscn")
 const BRIEFING_SCENE := preload("res://scenes/components/BriefingCard.tscn")
 const MANUAL_SCENE := preload("res://scenes/panels/ManualPanel.tscn")
+const LOG_SCENE := preload("res://scenes/panels/LogPanel.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
 @onready var _title: Label = $Root/Main/Header/Title
+@onready var _btn_log: Button = $Root/Main/Header/BtnLog
 @onready var _btn_manual: Button = $Root/Main/Header/BtnManual
 @onready var _btn_submit: Button = $Root/Main/Header/BtnSubmit
 @onready var _btn_back: Button = $Root/Main/Header/BtnBack
@@ -31,32 +33,54 @@ var _part_labels: Dictionary = {}     # part_id → 显示名
 var _actual: Dictionary = {"q": 1.0, "stability": 1.0, "fuel": 1.0}
 var _predicting: bool = false
 var _manual: ManualPanel = null
+var _log_panel: LogPanel = null
 
 
 func _ready() -> void:
-	GameState.reset(SaveManager.settings.get("difficulty", "novice"))
 	_btn_back.pressed.connect(_on_back)
 	_btn_submit.pressed.connect(_on_submit)
 	_btn_manual.pressed.connect(_on_manual)
+	_btn_log.pressed.connect(_on_log)
 	_manual = MANUAL_SCENE.instantiate()
 	add_child(_manual)
+	_log_panel = LOG_SCENE.instantiate()
+	add_child(_log_panel)
 	_build_gauges()
 	_wire_zones()
-	_start_round(1)
+
+	# current_round<=0 视为新局（菜单已 reset）；>0 视为续档，回到该轮起点
+	if GameState.current_round <= 0:
+		GameState.reset(SaveManager.settings.get("difficulty", "novice"))
+		_start_round(1)
+	else:
+		_start_round(GameState.current_round)
+
+	# 仅总工/自定义模式（show_history_log）显示历史日志入口
+	_btn_log.visible = bool(
+		DataManager.get_difficulty(GameState.difficulty).get("show_history_log", false)
+	)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# H 键随时唤出/收起运行手册
-	if event is InputEventKey and event.pressed and not event.echo \
-			and event.keycode == KEY_H:
-		_on_manual()
-		get_viewport().set_input_as_handled()
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_H:
+			_on_manual()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_L and _btn_log.visible:
+			_on_log()
+			get_viewport().set_input_as_handled()
 
 
 func _on_manual() -> void:
 	AudioManager.play("ui_click")
 	if _manual:
 		_manual.toggle()
+
+
+func _on_log() -> void:
+	AudioManager.play("ui_click")
+	if _log_panel:
+		_log_panel.toggle()
 
 
 func _process(_dt: float) -> void:
@@ -125,6 +149,7 @@ func _start_round(r: int) -> void:
 	for z in _zones:
 		z.refresh()
 	_settle()
+	SaveManager.save_game()   # 每轮开始即存档，支持退出续档
 
 
 ## 生成并显示本轮四份专家简报
@@ -148,6 +173,7 @@ func _on_submit() -> void:
 		"stability": _actual["stability"],
 		"fuel": _actual["fuel"],
 		"identified": newly.duplicate(),
+		"gauges": _gauge_snapshot(r),
 	})
 	AudioManager.play("ui_click")
 
@@ -168,8 +194,18 @@ func _finish(_last_feedback: String) -> void:
 		float(_actual["q"]), GameState.identified_causes.size()
 	)
 	SaveManager.unlock_achievement(key)
+	SaveManager.clear_save()   # 一局完成，清除续档
 	AudioManager.play("ending")
 	get_tree().change_scene_to_file("res://scenes/panels/EndingPanel.tscn")
+
+
+## 当前轮各关注仪表的读数快照（写入历史日志）
+func _gauge_snapshot(r: int) -> Dictionary:
+	var snap: Dictionary = {}
+	for id in ["toroidal_field", "wall_temp", "tritium_ratio"]:
+		if _gauge_base.has(id):
+			snap[id] = FaultTree.gauge_reading(r, id, float(_gauge_base[id]))
+	return snap
 
 
 # ---------------------------------------------------------------------------

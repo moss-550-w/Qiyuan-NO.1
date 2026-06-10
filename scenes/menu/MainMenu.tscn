@@ -119,10 +119,20 @@ theme_override_constants/separation = 12
 layout_mode = 2
 theme_override_constants/separation = 16
 
+[node name="BtnContinue" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(180, 48)
+layout_mode = 2
+text = "继续游戏"
+
 [node name="BtnStart" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(200, 48)
 layout_mode = 2
-text = "进入中控台"
+text = "新游戏 · 进入中控台"
+
+[node name="BtnDifficulty" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(180, 48)
+layout_mode = 2
+text = "难度：新手"
 
 [node name="BtnRefresh" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(160, 48)
