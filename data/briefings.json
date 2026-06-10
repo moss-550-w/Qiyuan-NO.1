@@ -1,28 +1,91 @@
 {
-  "_comment": "专家简报模板。按 round → expert_id 组织。stance=立场倾向；honest=客观陈述；spin=带偏见的话术；suspect_point=新手模式高亮的可疑点（在spin中以{{suspect}}标记位置）。",
+  "_comment": "专家简报模板。按 round → expert_id 组织。honest=客观陈述（玩家不可见，仅作对照）；spin=带立场话术（玩家所见）；spin 中 {{suspect}}...{{/suspect}} 标注可疑片段，新手模式高亮；suspect_point=可疑点说明。隐瞒/夸大由 BriefingSystem 据本轮故障动态判定。",
   "1": {
     "magnet_eng": {
       "honest": "环向场读数较昨日略低，疑似电源纹波，建议排查。",
-      "spin": "磁体一切正常，{{suspect}}那点波动是测量误差{{/suspect}}，钱先紧着线圈准没错。",
-      "suspect_point": "把电源纹波说成测量误差，疑似隐瞒磁体电源老化"
+      "spin": "磁体一切正常，{{suspect}}那点波动不过是测量误差{{/suspect}}，钱先紧着线圈准没错。",
+      "suspect_point": "环向场仪表已偏低，却称‘正常/测量误差’"
     },
     "wall_eng": {
       "honest": "第一壁温度正常，新内衬表现良好。",
-      "spin": "新钨铜内衬稳如泰山，完全不用投钱，省下来给我做下一批材料实验。",
+      "spin": "新钨铜内衬稳如泰山，这轮完全不用投钱，省下来给我做下一批材料实验。",
       "suspect_point": ""
     },
     "tritium_eng": {
       "honest": "氚自持率正常，处于安全区间。",
-      "spin": "氚……勉强够，但{{suspect}}迟早要出问题{{/suspect}}，建议现在就加大包层投入。",
-      "suspect_point": "当前氚自持率正常，疑似夸大风险"
+      "spin": "氚……勉强够，但{{suspect}}迟早要断料，现在就得加大包层投入{{/suspect}}！",
+      "suspect_point": "氚自持率仪表仍正常，却渲染‘要断料’"
     },
     "plasma_eng": {
       "honest": "约束稳定，控制算法运行平稳。",
-      "spin": "与其纠结硬件，不如把经费投给控制系统，治本。",
+      "spin": "与其纠结硬件，不如把经费投给控制系统，治本之道在算法。",
       "suspect_point": ""
     }
   },
-  "2": { "_todo": "第二轮四专家简报，结构同上" },
-  "3": { "_todo": "第三轮四专家简报，结构同上" },
-  "4": { "_todo": "第四轮四专家简报，结构同上" }
+  "2": {
+    "magnet_eng": {
+      "honest": "环向场持续下滑，电源老化迹象明显。",
+      "spin": "磁体嘛……{{suspect}}稍有波动但完全可控{{/suspect}}，不必小题大做，继续投线圈即可。",
+      "suspect_point": "环向场偏离扩大，仍被描述为‘可控’"
+    },
+    "wall_eng": {
+      "honest": "第一壁温度上升，疑似微裂纹萌生。",
+      "spin": "壁温升一点？{{suspect}}新材料的正常工作区间而已{{/suspect}}，裂纹纯属多虑，放心。",
+      "suspect_point": "壁温仪表升高，却归因为‘正常区间’"
+    },
+    "tritium_eng": {
+      "honest": "氚自持率仍正常。",
+      "spin": "我再强调一遍，{{suspect}}氚迟早不够，必须未雨绸缪砸钱包层{{/suspect}}！",
+      "suspect_point": "本轮氚读数正常，仍持续渲染危机"
+    },
+    "plasma_eng": {
+      "honest": "约束尚可，但壁温扰动需关注。",
+      "spin": "硬件问题都能用控制算法补偿，预算还是该投给我们物理组。",
+      "suspect_point": ""
+    }
+  },
+  "3": {
+    "magnet_eng": {
+      "honest": "本轮磁体读数回稳，问题不在磁体。",
+      "spin": "看吧，磁体早稳了，这轮别在我这儿浪费钱，去查别的系统。",
+      "suspect_point": ""
+    },
+    "wall_eng": {
+      "honest": "壁温显著升高，微裂纹很可能已扩展。",
+      "spin": "壁温是高了些，但{{suspect}}内衬寿命还长得很，撑得住{{/suspect}}，别急着大修。",
+      "suspect_point": "壁温已明显异常，仍称‘撑得住’"
+    },
+    "tritium_eng": {
+      "honest": "氚自持率确实下降，提取泵效率存疑。",
+      "spin": "我早说了吧！氚现在真的在贫化，泵效在掉，必须立刻投包层！",
+      "suspect_point": ""
+    },
+    "plasma_eng": {
+      "honest": "约束受壁温与燃料波动影响，趋势走弱。",
+      "spin": "再优化一版控制算法就能压住扰动，硬件先放放。",
+      "suspect_point": ""
+    }
+  },
+  "4": {
+    "magnet_eng": {
+      "honest": "环向场再度大幅下滑，电源老化已严重。",
+      "spin": "磁体又抖了……{{suspect}}应该还能扛一会儿吧{{/suspect}}，要不再观察观察？",
+      "suspect_point": "末轮环向场严重偏离，仍消极拖延"
+    },
+    "wall_eng": {
+      "honest": "壁温逼近临界，裂纹扩展风险极高。",
+      "spin": "壁温有点吓人，但{{suspect}}我赌它还没破{{/suspect}}，钱投控制系统更划算。",
+      "suspect_point": "壁温逼近临界，仍以‘赌’回避"
+    },
+    "tritium_eng": {
+      "honest": "氚贫化加剧，燃料自持告急。",
+      "spin": "燃料真的要断了！这次是真的，所有余钱都给包层！",
+      "suspect_point": ""
+    },
+    "plasma_eng": {
+      "honest": "多重耦合扰动叠加，单靠算法已难维持。",
+      "spin": "情况复杂，但我仍相信算法优化能力挽狂澜，投控制系统吧。",
+      "suspect_point": ""
+    }
+  }
 }

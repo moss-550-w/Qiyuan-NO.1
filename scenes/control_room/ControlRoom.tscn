@@ -89,6 +89,16 @@ fit_content = true
 scroll_active = false
 text = ""
 
+[node name="BriefingTitle" type="Label" parent="Root/Main"]
+layout_mode = 2
+text = "子系统负责人简报 · 与下方仪表交叉验证，警惕隐瞒与夸大"
+theme_override_colors/font_color = Color(0.682353, 0.788235, 0.882353, 1)
+theme_override_font_sizes/font_size = 15
+
+[node name="BriefingRow" type="HBoxContainer" parent="Root/Main"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
 [node name="GaugeTitle" type="Label" parent="Root/Main"]
 layout_mode = 2
 text = "实时仪表（Q值 / 稳定度 随投资联动，其余为物理读数）"

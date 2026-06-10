@@ -8,12 +8,14 @@ extends Control
 
 const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
 const TOKEN_SCENE := preload("res://scenes/components/BudgetToken.tscn")
+const BRIEFING_SCENE := preload("res://scenes/components/BriefingCard.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
 @onready var _title: Label = $Root/Main/Header/Title
 @onready var _btn_submit: Button = $Root/Main/Header/BtnSubmit
 @onready var _btn_back: Button = $Root/Main/Header/BtnBack
 @onready var _info: RichTextLabel = $Root/Main/InfoLabel
+@onready var _briefing_row: HBoxContainer = $Root/Main/BriefingRow
 @onready var _metrics: RichTextLabel = $Root/Main/MetricsPanel/MetricsLabel
 @onready var _gauge_row: HBoxContainer = $Root/Main/GaugeRow
 @onready var _device_view: HBoxContainer = $Root/Main/DeviceView
@@ -98,10 +100,22 @@ func _start_round(r: int) -> void:
 		fault_round.get("title", "第 %d 轮" % r),
 		_round_intro(r),
 	]
+	_build_briefings(r)
 	_rebuild_pool()
 	for z in _zones:
 		z.refresh()
 	_settle()
+
+
+## 生成并显示本轮四份专家简报
+func _build_briefings(r: int) -> void:
+	for c in _briefing_row.get_children():
+		c.queue_free()
+	for b in BriefingSystem.generate(r):
+		var card: BriefingCard = BRIEFING_SCENE.instantiate()
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_briefing_row.add_child(card)
+		card.setup(b)
 
 
 ## 提交本轮：识别判定 → 记录 → 推进 / 结束

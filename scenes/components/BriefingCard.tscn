@@ -1,0 +1,80 @@
+[gd_scene load_steps=3 format=3 uid="uid://bbriefcard0q1"]
+
+[ext_resource type="Script" path="res://scripts/ui/BriefingCard.gd" id="1_bc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_brief"]
+bg_color = Color(0.0784314, 0.105882, 0.176471, 0.901961)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.168627, 0.835294, 1, 0.301961)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="BriefingCard" type="Panel"]
+custom_minimum_size = Vector2(280, 158)
+offset_right = 280.0
+offset_bottom = 158.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_brief")
+script = ExtResource("1_bc")
+
+[node name="Margin" type="MarginContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Header" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Dot" type="ColorRect" parent="Margin/VBox/Header"]
+custom_minimum_size = Vector2(14, 14)
+layout_mode = 2
+size_flags_vertical = 4
+color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Name" type="Label" parent="Margin/VBox/Header"]
+layout_mode = 2
+text = "专家"
+theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
+theme_override_font_sizes/font_size = 17
+
+[node name="Personality" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "性格"
+theme_override_colors/font_color = Color(0.55, 0.62, 0.72, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="Text" type="RichTextLabel" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = true
+autowrap_mode = 2
+scroll_active = false
+text = "简报内容"
+theme_override_colors/default_color = Color(0.85, 0.89, 0.94, 1)
+theme_override_font_sizes/normal_font_size = 14
+
+[node name="Suspect" type="RichTextLabel" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+autowrap_mode = 2
+scroll_active = false
+text = ""
+theme_override_font_sizes/normal_font_size = 12
