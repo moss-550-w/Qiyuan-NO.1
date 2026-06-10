@@ -7,6 +7,7 @@ extends Control
 ## 3. 用 rounds.json 的 gauge 配置实例化一排 Gauge 并注入假数据，验证数据流。
 
 const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
+const SETTINGS_SCENE := preload("res://scenes/panels/SettingsPanel.tscn")
 const CONTROL_ROOM := "res://scenes/control_room/ControlRoom.tscn"
 const DIFFICULTY_CYCLE := ["novice", "chief", "custom"]
 
@@ -15,18 +16,30 @@ const DIFFICULTY_CYCLE := ["novice", "chief", "custom"]
 @onready var _btn_continue: Button = $Center/Panel/Margin/VBox/Buttons/BtnContinue
 @onready var _btn_start: Button = $Center/Panel/Margin/VBox/Buttons/BtnStart
 @onready var _btn_difficulty: Button = $Center/Panel/Margin/VBox/Buttons/BtnDifficulty
+@onready var _btn_settings: Button = $Center/Panel/Margin/VBox/Buttons/BtnSettings
 @onready var _btn_refresh: Button = $Center/Panel/Margin/VBox/Buttons/BtnRefresh
 
 var _gauges: Array[Gauge] = []
+var _settings_panel: SettingsPanel = null
 
 
 func _ready() -> void:
 	_btn_start.pressed.connect(_on_start_pressed)
 	_btn_continue.pressed.connect(_on_continue_pressed)
 	_btn_difficulty.pressed.connect(_on_cycle_difficulty)
+	_btn_settings.pressed.connect(_on_settings)
 	_btn_refresh.pressed.connect(_run_self_check)
+	_settings_panel = SETTINGS_SCENE.instantiate()
+	add_child(_settings_panel)
+	_settings_panel.settings_changed.connect(_update_buttons)
 	_run_self_check()
 	AudioManager.play_bgm("menu")
+
+
+func _on_settings() -> void:
+	AudioManager.play("ui_click")
+	if _settings_panel:
+		_settings_panel.open()
 
 
 ## 启动自检：检查 DataManager 状态、构建仪表演示、刷新按钮状态
