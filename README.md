@@ -3,10 +3,20 @@
 > 基于 Godot 4.6 的**纯单机离线**核聚变科普游戏 —— 体验"托卡马克装置中控室紧急排障"。
 > 零服务器、零网络请求、下载即玩。在四轮递进式耦合故障中扮演当班运行总工程师，甄别专家简报、分配维护经费、识破故障根因，强行维持等离子体。
 
+### ▶ 在线试玩
+
+**[https://moss-550-w.github.io/Qiyuan-NO.1/](https://moss-550-w.github.io/Qiyuan-NO.1/)**
+
+> 浏览器直接打开即玩，无需安装。游戏本体严格离线（在线页面仅为静态托管，加载后断网亦可运行）。
+> 首次加载需下载约 20MB 资源，建议使用 Chrome / Edge 等现代浏览器。
+
+📦 源码仓库：[github.com/moss-550-w/Qiyuan-NO.1](https://github.com/moss-550-w/Qiyuan-NO.1)
+
 ---
 
 ## 目录
 
+- [在线试玩](#-在线试玩)
 - [玩法概述](#玩法概述)
 - [操作说明](#操作说明)
 - [视听表现](#视听表现)
@@ -180,11 +190,29 @@ res://
 "<Godot可执行文件>" --headless --path . --import
 ```
 
-### 导出（D10 计划）
+### 导出
 
 桌面三平台 + HTML5。HTML5 端建议在设置中将粒子质量降为 `low` 以保证流畅。导出产物完全离线，可直接上传 GitHub Pages 等静态托管。
 
 > 导出需安装对应 Godot 版本的 **导出模板**（编辑器 → 项目 → 导出 → 管理导出模板）。
+
+**Web 导出关键配置**（`export_presets.cfg` 已设好）：
+
+| 选项 | 值 | 原因 |
+|------|----|------|
+| `线程支持 / thread_support` | **关** | 开启需 `SharedArrayBuffer` → 需 COOP/COEP 响应头，GitHub Pages 无法提供 |
+| 入口文件名 | `index.html` | ASCII 命名，避免中文名 URL 编码导致 `Failed to fetch`；Pages 自动加载 |
+| 默认字体 | 思源黑体（SIL OFL） | 内置字体无中文字形，Web 端取不到系统字体，必须随包内置 |
+
+> 本地预览：进入导出目录执行 `python -m http.server`，浏览器开 `http://localhost:8000/`（**勿用 `file://` 双击打开**，否则 `Failed to fetch`）。
+
+### 自动部署（CI/CD）
+
+仓库已配置 GitHub Actions（`.github/workflows/deploy-pages.yml`）：**推送到 `main` 分支即自动**用 Godot 4.6.3 headless 构建 Web 导出并发布到 GitHub Pages。
+
+- 首次使用需在仓库 **Settings → Pages → Source** 选择 **GitHub Actions**。
+- 构建产物经 Pages 制品流水线部署，无需将 `h5/` 提交进仓库。
+- Godot 与导出模板（约 600MB）首次后缓存，后续构建跳过下载。
 
 ---
 
@@ -215,7 +243,7 @@ res://
 - [x] **D7** 存读档 + 成就 + 历史运行日志
 - [x] **D8** 时间压力 + 难度生效 + 浮动科普标签
 - [x] **D9** 全流程贯通测试 + 等离子体粒子 + 性能开关
-- [ ] **D10** 多平台导出 + 打包 + 分发
+- [x] **D10** 多平台导出 + 打包 + 分发（Web 已上线，桌面三平台预设就绪）
 
 额外完成（超出原排期的打磨）：
 
@@ -223,6 +251,8 @@ res://
 - [x] 游戏内设置面板（音量 / 粒子 / 难度 / 限时）
 - [x] 实时托卡马克剖面动画 + 破裂报警联动
 - [x] 三档结局运行动画（全屏先演后入卡）
+- [x] 内置中文字体（思源黑体）+ Web 中文显示修复
+- [x] GitHub Actions 自动构建 + 部署 GitHub Pages
 
 > 全部核心逻辑均经 Godot 4.6 headless 实跑验证（详见各阶段测试）。
 
