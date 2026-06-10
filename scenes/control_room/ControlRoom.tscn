@@ -59,6 +59,11 @@ text = "启元一号 · 中控台　|　第 1 轮"
 theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
 theme_override_font_sizes/font_size = 30
 
+[node name="BtnSubmit" type="Button" parent="Root/Main/Header"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "提交本轮 ▶"
+
 [node name="BtnBack" type="Button" parent="Root/Main/Header"]
 custom_minimum_size = Vector2(120, 40)
 layout_mode = 2
@@ -75,6 +80,14 @@ bbcode_enabled = true
 fit_content = true
 scroll_active = false
 text = "核心指标载入中…"
+
+[node name="InfoLabel" type="RichTextLabel" parent="Root/Main"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = ""
 
 [node name="GaugeTitle" type="Label" parent="Root/Main"]
 layout_mode = 2

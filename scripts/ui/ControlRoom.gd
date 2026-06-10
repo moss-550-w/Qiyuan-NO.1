@@ -1,22 +1,27 @@
 extends Control
-## ControlRoom —— 中控台主场景（D2：拖放 + 实时预测 + 仪表联动）
+## ControlRoom —— 中控台主场景（D3：故障联动 + 轮次提交结算）
 ##
-## 整合：经费池(代币) + 四部位 DropZone + 仪表行 + 核心指标显示。
-## 数据流：拖放 token → GameState.allocate → FusionEngine 结算 → 刷新仪表/指标。
-## 悬停预测：DropZone.hover_preview → FusionEngine.predict_with_extra → 高亮回显增量。
+## 在 D2 拖放/预测基础上接入 FaultTree：
+##   - 每轮开始按 faults.json 施加故障，物理仪表偏离正常、Q/稳定/燃料 baseline 被拉低。
+##   - 玩家在"正确部位"投入修复，仪表读数回升、指标缓解（实时预测可见）。
+##   - 点"提交本轮"：投入达阈值的根因被识破并记录，推进下一轮；末轮触发结局占位。
 
 const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
 const TOKEN_SCENE := preload("res://scenes/components/BudgetToken.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
+@onready var _title: Label = $Root/Main/Header/Title
+@onready var _btn_submit: Button = $Root/Main/Header/BtnSubmit
+@onready var _btn_back: Button = $Root/Main/Header/BtnBack
+@onready var _info: RichTextLabel = $Root/Main/InfoLabel
 @onready var _metrics: RichTextLabel = $Root/Main/MetricsPanel/MetricsLabel
 @onready var _gauge_row: HBoxContainer = $Root/Main/GaugeRow
 @onready var _device_view: HBoxContainer = $Root/Main/DeviceView
 @onready var _token_row: HBoxContainer = $Root/Main/PoolPanel/PoolVBox/TokenRow
 @onready var _pool_label: Label = $Root/Main/PoolPanel/PoolVBox/PoolLabel
-@onready var _btn_back: Button = $Root/Main/Header/BtnBack
 
 var _gauges: Dictionary = {}          # gauge_id → Gauge
+var _gauge_base: Dictionary = {}      # gauge_id → 基准读数
 var _zones: Array[DropZone] = []
 var _part_labels: Dictionary = {}     # part_id → 显示名
 var _actual: Dictionary = {"q": 1.0, "stability": 1.0, "fuel": 1.0}
@@ -25,16 +30,14 @@ var _predicting: bool = false
 
 func _ready() -> void:
 	GameState.reset(SaveManager.settings.get("difficulty", "novice"))
-	GameState.start_round(1)
 	_btn_back.pressed.connect(_on_back)
+	_btn_submit.pressed.connect(_on_submit)
 	_build_gauges()
 	_wire_zones()
-	_rebuild_pool()
-	_settle()
+	_start_round(1)
 
 
 func _process(_dt: float) -> void:
-	# 拖放结束（无论在何处释放）后，把指标显示恢复为实际值
 	if _predicting and not get_viewport().gui_is_dragging():
 		_predicting = false
 		_show_actual()
@@ -54,6 +57,7 @@ func _build_gauges() -> void:
 		_gauge_row.add_child(gauge)
 		gauge.setup(id, gauges_def[id])
 		_gauges[id] = gauge
+		_gauge_base[id] = float((gauges_def[id] as Dictionary).get("base", 0.0))
 
 
 func _wire_zones() -> void:
@@ -67,7 +71,6 @@ func _wire_zones() -> void:
 			zone.hover_preview.connect(_on_hover_preview)
 
 
-## 按剩余经费重建代币池（剩余 / 面额 枚）
 func _rebuild_pool() -> void:
 	for t in _token_row.get_children():
 		t.queue_free()
@@ -76,8 +79,61 @@ func _rebuild_pool() -> void:
 		var token: BudgetToken = TOKEN_SCENE.instantiate()
 		_token_row.add_child(token)
 		token.set_face_value(TOKEN_FACE)
-	_pool_label.text = "经费池 · 剩余 ¥%d（每枚 ¥%d，拖到下方装置部位投资）" % \
+	_pool_label.text = "经费池 · 剩余 ¥%d（每枚 ¥%d，拖到下方装置部位投资修复）" % \
 		[GameState.budget_remaining, TOKEN_FACE]
+
+
+# ---------------------------------------------------------------------------
+# 轮次流程
+# ---------------------------------------------------------------------------
+
+## 开始第 r 轮：重置经费分配、施加故障、刷新全部显示
+func _start_round(r: int) -> void:
+	GameState.start_round(r)
+	_btn_submit.disabled = false
+	_title.text = "启元一号 · 中控台　|　第 %d 轮 / %d" % [r, GameState.TOTAL_ROUNDS]
+
+	var fault_round: Dictionary = FaultTree.round_data(r)
+	_info.text = "[color=#f5c63f]%s[/color]　%s" % [
+		fault_round.get("title", "第 %d 轮" % r),
+		_round_intro(r),
+	]
+	_rebuild_pool()
+	for z in _zones:
+		z.refresh()
+	_settle()
+
+
+## 提交本轮：识别判定 → 记录 → 推进 / 结束
+func _on_submit() -> void:
+	var r: int = GameState.current_round
+	var newly: Array = FaultTree.evaluate_round(r)
+	GameState.add_log({
+		"round": r,
+		"q": _actual["q"],
+		"stability": _actual["stability"],
+		"fuel": _actual["fuel"],
+		"identified": newly.duplicate(),
+	})
+	AudioManager.play("ui_click")
+
+	var feedback: String = _identify_feedback(newly)
+	if GameState.is_final_round():
+		_finish(feedback)
+	else:
+		AudioManager.play("round_start")
+		_start_round(r + 1)
+		_info.text += "　" + feedback
+
+
+## 末轮结束（D5 接 EndingResolver + 结局面板，此处先占位汇总）
+func _finish(last_feedback: String) -> void:
+	_btn_submit.disabled = true
+	var identified: int = GameState.identified_causes.size()
+	var total: int = GameState.ROOT_CAUSES.size()
+	_info.text = "[color=#2bd6ff]■ 全部 %d 轮结束[/color]　%s　最终 Q=%.2f　识破根因 %d/%d　[color=#8893a5]（结局面板 D5 实现）[/color]" % [
+		GameState.TOTAL_ROUNDS, last_feedback, float(_actual["q"]), identified, total,
+	]
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +158,6 @@ func _on_withdraw(part_id: String) -> void:
 
 
 func _on_hover_preview(part_id: String, amount: int) -> void:
-	# 经费不足以再投时不预测
 	if GameState.budget_remaining < amount:
 		return
 	_predicting = true
@@ -119,15 +174,21 @@ func _settle() -> void:
 	var pred: Dictionary = FusionEngine.predict_with_extra("", 0)
 	_actual = pred
 	GameState.set_metrics(pred["q"], pred["stability"], pred["fuel"])
-	_update_metric_gauges(pred)
+	_refresh_gauges()
 	_show_actual()
 
 
-func _update_metric_gauges(m: Dictionary) -> void:
-	if _gauges.has("q_value"):
-		(_gauges["q_value"] as Gauge).set_reading(float(m["q"]))
-	if _gauges.has("stability"):
-		(_gauges["stability"] as Gauge).set_reading(float(m["stability"]) * 100.0)
+## 刷新全部仪表：物理仪表按故障残余偏移，Q值/稳定度按结算指标
+func _refresh_gauges() -> void:
+	var r: int = GameState.current_round
+	for id in _gauges:
+		var gauge := _gauges[id] as Gauge
+		if id == "q_value":
+			gauge.set_reading(float(_actual["q"]))
+		elif id == "stability":
+			gauge.set_reading(float(_actual["stability"]) * 100.0)
+		else:
+			gauge.set_reading(FaultTree.gauge_reading(r, id, float(_gauge_base.get(id, 0.0))))
 
 
 func _refresh_zone(part_id: String) -> void:
@@ -138,10 +199,10 @@ func _refresh_zone(part_id: String) -> void:
 
 
 func _show_actual() -> void:
-	_metrics.text = "[b]核心指标[/b]    Q值 %s    稳定度 %d%%    燃料自持 %d%%    [color=#f5c63f]剩余经费 ¥%d[/color]" % [
+	_metrics.text = "[b]核心指标[/b]    Q值 %s    稳定度 %s    燃料自持 %s    [color=#f5c63f]剩余经费 ¥%d[/color]" % [
 		_fmt_q(float(_actual["q"])),
-		roundi(float(_actual["stability"]) * 100.0),
-		roundi(float(_actual["fuel"]) * 100.0),
+		_fmt_pct(float(_actual["stability"]), 75),
+		_fmt_pct(float(_actual["fuel"]), 85),
 		GameState.budget_remaining,
 	]
 
@@ -149,19 +210,45 @@ func _show_actual() -> void:
 func _show_prediction(part_id: String, amount: int, pred: Dictionary) -> void:
 	var dq: float = float(pred["q"]) - float(_actual["q"])
 	var ds: float = (float(pred["stability"]) - float(_actual["stability"])) * 100.0
+	var df: float = (float(pred["fuel"]) - float(_actual["fuel"])) * 100.0
 	var label: String = _part_labels.get(part_id, part_id)
-	_metrics.text = "[b][color=#2bd6ff]预测[/color][/b] 向 %s 投入 +%d → Q值 %s (%s)   稳定度 %d%% (%s)" % [
+	_metrics.text = "[b][color=#2bd6ff]预测[/color][/b] 向 %s 投入 +%d → Q %s(%s)  稳定 %d%%(%s)  燃料 %d%%(%s)" % [
 		label, amount,
 		_fmt_q(float(pred["q"])), _fmt_delta(dq, 2),
 		roundi(float(pred["stability"]) * 100.0), _fmt_delta(ds, 0),
+		roundi(float(pred["fuel"]) * 100.0), _fmt_delta(df, 0),
 	]
 
 
-# --- 格式化辅助 ---
+# --- 文本辅助 ---
+
+func _round_intro(r: int) -> String:
+	var rounds_cfg: Variant = DataManager.get_config("rounds")
+	if rounds_cfg is Dictionary:
+		for rr in (rounds_cfg as Dictionary).get("rounds", []):
+			if int((rr as Dictionary).get("round", -1)) == r:
+				return (rr as Dictionary).get("intro", "")
+	return ""
+
+
+func _identify_feedback(newly: Array) -> String:
+	if newly.is_empty():
+		return "[color=#e09040]本轮未在根因部位投足修复阈值，未识破根因。[/color]"
+	var names: Array = []
+	for c in newly:
+		names.append(FaultTree.cause_name(c))
+	return "[color=#4ed36a]✓ 识破并处置：%s[/color]" % ", ".join(names)
+
 
 func _fmt_q(q: float) -> String:
 	var color := "#4ed36a" if q >= 1.0 else "#e64040"
 	return "[color=%s]%.2f[/color]" % [color, q]
+
+
+func _fmt_pct(ratio: float, warn_below: int) -> String:
+	var pct: int = roundi(ratio * 100.0)
+	var color := "#4ed36a" if pct >= warn_below else "#e64040"
+	return "[color=%s]%d%%[/color]" % [color, pct]
 
 
 func _fmt_delta(d: float, decimals: int) -> String:

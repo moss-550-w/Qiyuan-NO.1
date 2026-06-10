@@ -27,5 +27,12 @@
   "ending_thresholds": {
     "q_low": 1.0,
     "q_high": 1.1
+  },
+  "fault_impact": {
+    "_comment": "故障对指标的最大惩罚（满故障未修复时）。metric=作用指标；max_penalty=最大负偏移；实际惩罚=max_penalty*(1-修复进度)*(本轮deviation/reference_deviation)。",
+    "reference_deviation": 0.10,
+    "magnet_psu_aging": { "metric": "q", "max_penalty": 0.15 },
+    "wall_microcrack": { "metric": "stability", "max_penalty": 0.30 },
+    "tritium_pump_decay": { "metric": "fuel", "max_penalty": 0.28 }
   }
 }

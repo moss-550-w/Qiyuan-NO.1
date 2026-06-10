@@ -72,14 +72,11 @@ static func predict(
 
 ## 便捷预测：基于 GameState 当前局势，叠加一个假想增量（用于悬停预测）。
 ## extra_part / extra_amount 为悬停部位与拟投入量，传空串则等价于当前实际预测。
+## 故障对指标的拉低由 FaultTree 按"假想分配后的修复进度"实时计算，全部走
+## fault_offsets，因此 unfixed_causes 传 0，避免与故障惩罚双重扣减。
 static func predict_with_extra(extra_part: String, extra_amount: int) -> Dictionary:
 	var alloc: Dictionary = GameState.round_allocation.duplicate()
 	if extra_part != "" and alloc.has(extra_part):
 		alloc[extra_part] = int(alloc[extra_part]) + extra_amount
-	var unfixed: int = GameState.ROOT_CAUSES.size() - GameState.identified_causes.size()
-	return predict(alloc, unfixed, false, DataManager.get_balance(), _current_fault_offsets())
-
-
-## 当前故障对指标的 baseline 偏移（D2 占位返回空；D3 由 FaultTree 填充）。
-static func _current_fault_offsets() -> Dictionary:
-	return {}
+	var fault_offsets: Dictionary = FaultTree.metric_offsets(GameState.current_round, alloc)
+	return predict(alloc, 0, false, DataManager.get_balance(), fault_offsets)
