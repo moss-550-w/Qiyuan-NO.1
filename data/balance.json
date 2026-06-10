@@ -1,0 +1,31 @@
+{
+  "_comment": "核心数值平衡参数，集中外置便于调参。经费效果采用边际递减：gain = k * (1 - exp(-invest/tau))。",
+  "budget_effect": {
+    "magnet_coil":     { "k": 1.0, "tau": 30.0, "affects": "q" },
+    "first_wall":      { "k": 1.0, "tau": 30.0, "affects": "stability" },
+    "breeder_blanket": { "k": 1.0, "tau": 25.0, "affects": "fuel" },
+    "plasma_control":  { "k": 0.8, "tau": 28.0, "affects": "q_and_stability" }
+  },
+  "q_value": {
+    "base": 1.0,
+    "magnet_weight": 0.20,
+    "control_weight": 0.10,
+    "unfixed_cause_penalty": 0.08
+  },
+  "stability": {
+    "base": 0.9,
+    "wall_weight": 0.15,
+    "control_weight": 0.10,
+    "delay_penalty": 0.05,
+    "disruption_threshold": 0.4
+  },
+  "fuel": {
+    "base": 1.0,
+    "blanket_weight": 0.15,
+    "warning_threshold": 0.85
+  },
+  "ending_thresholds": {
+    "q_low": 1.0,
+    "q_high": 1.1
+  }
+}

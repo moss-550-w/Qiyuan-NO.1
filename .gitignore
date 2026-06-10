@@ -1,0 +1,21 @@
+# Godot 4 工程忽略规则
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+
+# 导出产物
+/build/
+/export/
+*.exe
+*.app
+*.pck
+*.zip
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/

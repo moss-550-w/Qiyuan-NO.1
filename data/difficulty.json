@@ -1,0 +1,30 @@
+{
+  "_comment": "三种难度参数。gauge_noise=仪表读数随机噪声幅度(0~1)；highlight_suspect=简报可疑点高亮；show_hint_dash=拖放建议虚线；time_limit=每轮限时秒(0=不限时，会被rounds.json逐轮覆盖)；total_budget=每轮经费总量。",
+  "novice": {
+    "label": "新手 / 科普模式",
+    "gauge_noise": 0.0,
+    "highlight_suspect": true,
+    "show_hint_dash": true,
+    "time_limit": 0,
+    "total_budget": 100,
+    "show_history_log": false
+  },
+  "chief": {
+    "label": "总工模式",
+    "gauge_noise": 0.03,
+    "highlight_suspect": false,
+    "show_hint_dash": false,
+    "time_limit": 300,
+    "total_budget": 100,
+    "show_history_log": true
+  },
+  "custom": {
+    "label": "自定义模式",
+    "gauge_noise": 0.02,
+    "highlight_suspect": false,
+    "show_hint_dash": false,
+    "time_limit": 240,
+    "total_budget": 100,
+    "show_history_log": true
+  }
+}

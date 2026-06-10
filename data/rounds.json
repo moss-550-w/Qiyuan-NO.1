@@ -1,0 +1,17 @@
+{
+  "_comment": "每轮的仪表基准读数与限时。实际显示值 = base * (1 + 故障deviation之和) + 噪声(由difficulty.gauge_noise控制)。",
+  "gauges": {
+    "toroidal_field": { "label": "环向场强度", "unit": "T", "base": 5.30, "normal_min": 5.0, "normal_max": 5.5 },
+    "plasma_temp":    { "label": "等离子体温度", "unit": "keV", "base": 100.0, "normal_min": 80.0, "normal_max": 120.0 },
+    "wall_temp":      { "label": "第一壁温度", "unit": "℃", "base": 600.0, "normal_min": 500.0, "normal_max": 750.0 },
+    "tritium_ratio":  { "label": "氚自持率 TBR", "unit": "", "base": 1.10, "normal_min": 1.0, "normal_max": 1.2 },
+    "q_value":        { "label": "能量增益 Q", "unit": "", "base": 1.05, "normal_min": 1.0, "normal_max": 1.2 },
+    "stability":      { "label": "约束稳定度", "unit": "%", "base": 90.0, "normal_min": 70.0, "normal_max": 100.0 }
+  },
+  "rounds": [
+    { "round": 1, "time_limit": 300, "intro": "运行第 1 小时，各表读数大体正常，留意环向场。" },
+    { "round": 2, "time_limit": 300, "intro": "运行第 3 小时，壁温与约束出现波动。" },
+    { "round": 3, "time_limit": 240, "intro": "运行第 6 小时，氚自持率开始走低。" },
+    { "round": 4, "time_limit": 180, "intro": "运行第 10 小时，多项指标逼近临界，决战时刻。" }
+  ]
+}

@@ -1,0 +1,130 @@
+[gd_scene load_steps=3 format=3 uid="uid://c0menu0qy01"]
+
+[ext_resource type="Script" path="res://scripts/ui/MainMenu.gd" id="1_menu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.0470588, 0.0627451, 0.117647, 0.941176)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.168627, 0.835294, 1, 0.301961)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0235294, 0.0313726, 0.0627451, 1)
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 60.0
+offset_right = 400.0
+offset_bottom = 140.0
+grow_horizontal = 2
+horizontal_alignment = 1
+text = "聚变纪元 · 启元一号"
+theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
+theme_override_font_sizes/font_size = 56
+
+[node name="Subtitle" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 130.0
+offset_right = 400.0
+offset_bottom = 165.0
+grow_horizontal = 2
+horizontal_alignment = 1
+text = "托卡马克装置中控室紧急排障 · 纯单机离线科普"
+theme_override_colors/font_color = Color(0.682353, 0.788235, 0.882353, 1)
+theme_override_font_sizes/font_size = 20
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Center"]
+custom_minimum_size = Vector2(1100, 460)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 30
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 30
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="SectionTitle" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "启动自检 · 数据流验证"
+theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="StatusLabel" type="RichTextLabel" parent="Center/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+text = "检测中…"
+
+[node name="GaugeLabel" type="Label" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+text = "仪表演示（注入假数据，已制造 -8% 偏移以验证告警着色）："
+theme_override_colors/font_color = Color(0.682353, 0.788235, 0.882353, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="GaugeRow" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BtnStart" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+text = "进入中控台"
+
+[node name="BtnRefresh" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "重新自检"

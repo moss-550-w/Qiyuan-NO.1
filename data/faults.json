@@ -1,0 +1,60 @@
+{
+  "_comment": "故障树：三个根本原因 → 四轮递进表象。symptom.gauge 指仪表id，deviation 为相对正常值的偏移（负=偏低）。fix_part 指有效修复部位。",
+  "root_causes": {
+    "magnet_psu_aging": {
+      "name": "磁体电源老化",
+      "desc": "环向场磁体供电电源纹波增大，磁场强度缓慢下降，长期将削弱约束。",
+      "fix_part": "magnet_coil",
+      "fix_threshold": 35,
+      "linked_expert": "magnet_eng"
+    },
+    "wall_microcrack": {
+      "name": "第一壁微裂纹",
+      "desc": "第一壁内衬在中子辐照下萌生微裂纹，热负荷下扩展，威胁稳定度。",
+      "fix_part": "first_wall",
+      "fix_threshold": 35,
+      "linked_expert": "wall_eng"
+    },
+    "tritium_pump_decay": {
+      "name": "氚提取泵效率下降",
+      "desc": "氚提取泵叶轮磨损，提取效率下降，燃料自持率逐轮走低。",
+      "fix_part": "breeder_blanket",
+      "fix_threshold": 30,
+      "linked_expert": "tritium_eng"
+    }
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "title": "第一轮 · 约束轻微下滑",
+      "symptoms": [
+        { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.06 }
+      ]
+    },
+    {
+      "round": 2,
+      "title": "第二轮 · 壁温异常 + 约束持续",
+      "symptoms": [
+        { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.10 },
+        { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.08 }
+      ]
+    },
+    {
+      "round": 3,
+      "title": "第三轮 · 燃料贫化显现",
+      "symptoms": [
+        { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.14 },
+        { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.12 }
+      ]
+    },
+    {
+      "round": 4,
+      "title": "第四轮 · 多重耦合临界",
+      "symptoms": [
+        { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.15 },
+        { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.20 },
+        { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.20 }
+      ]
+    }
+  ]
+}

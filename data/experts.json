@@ -1,0 +1,50 @@
+{
+  "magnet_eng": {
+    "name": "磁体工程师",
+    "title": "环向场磁体系统负责人",
+    "personality": "conservative",
+    "personality_label": "老派稳妥型",
+    "avatar": "res://assets/art/avatars/magnet.png",
+    "bias_target": "magnet_coil",
+    "hide_signal": ["magnet_psu_aging"],
+    "exaggerate_signal": [],
+    "tone": "沉稳、惜字、回避担责",
+    "catchphrase": "磁体稳了，一切才稳。钱得先紧着线圈。"
+  },
+  "wall_eng": {
+    "name": "材料与第一壁负责人",
+    "title": "第一壁与偏滤器系统负责人",
+    "personality": "aggressive",
+    "personality_label": "激进冒险型",
+    "avatar": "res://assets/art/avatars/wall.png",
+    "bias_target": "first_wall",
+    "hide_signal": ["wall_microcrack"],
+    "exaggerate_signal": [],
+    "tone": "自信、夸张、爱推新材料",
+    "catchphrase": "新钨铜内衬扛得住，微裂纹？那都是噪声。"
+  },
+  "tritium_eng": {
+    "name": "氚循环工程师",
+    "title": "氚增殖与燃料循环负责人",
+    "personality": "pessimistic",
+    "personality_label": "悲观预警型",
+    "avatar": "res://assets/art/avatars/tritium.png",
+    "bias_target": "breeder_blanket",
+    "hide_signal": [],
+    "exaggerate_signal": ["tritium_pump_decay"],
+    "tone": "焦虑、反复强调风险、夸大贫化",
+    "catchphrase": "氚又不够了！再不投包层我们要断料！"
+  },
+  "plasma_eng": {
+    "name": "等离子体物理师",
+    "title": "等离子体控制与诊断负责人",
+    "personality": "idealistic",
+    "personality_label": "理想主义型",
+    "avatar": "res://assets/art/avatars/plasma.png",
+    "bias_target": "plasma_control",
+    "hide_signal": [],
+    "exaggerate_signal": [],
+    "tone": "理论先行、轻视硬件、推崇算法",
+    "catchphrase": "与其砸钱堆材料，不如优化控制算法。"
+  }
+}

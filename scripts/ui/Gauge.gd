@@ -1,0 +1,49 @@
+extends Panel
+class_name Gauge
+## Gauge —— 可复用仪表盘组件
+##
+## 显示单个指标：标签、当前值、单位，并按正常区间着色（绿/黄/红）。
+## 数据由外部通过 set_reading() 注入，组件本身不持有业务逻辑。
+
+@onready var _label: Label = $Margin/VBox/LabelName
+@onready var _value: Label = $Margin/VBox/LabelValue
+@onready var _bar: ProgressBar = $Margin/VBox/Bar
+
+var gauge_id: String = ""
+var _unit: String = ""
+var _normal_min: float = 0.0
+var _normal_max: float = 1.0
+
+const COLOR_NORMAL := Color(0.30, 0.85, 0.40)   # 绿
+const COLOR_WARN := Color(0.95, 0.80, 0.25)     # 黄
+const COLOR_DANGER := Color(0.90, 0.25, 0.25)   # 红
+
+
+## 用 rounds.json 的 gauge 配置初始化
+func setup(id: String, cfg: Dictionary) -> void:
+	gauge_id = id
+	_unit = cfg.get("unit", "")
+	_normal_min = float(cfg.get("normal_min", 0.0))
+	_normal_max = float(cfg.get("normal_max", 1.0))
+	_label.text = cfg.get("label", id)
+	_bar.min_value = _normal_min - (_normal_max - _normal_min) * 0.5
+	_bar.max_value = _normal_max + (_normal_max - _normal_min) * 0.5
+	set_reading(float(cfg.get("base", _normal_min)))
+
+
+## 更新当前读数并刷新着色
+func set_reading(value: float) -> void:
+	_value.text = "%.2f %s" % [value, _unit] if not _unit.is_empty() else "%.2f" % value
+	_bar.value = clampf(value, _bar.min_value, _bar.max_value)
+
+	var color := COLOR_NORMAL
+	if value < _normal_min or value > _normal_max:
+		# 越界程度决定黄/红
+		var span := maxf(_normal_max - _normal_min, 0.0001)
+		var over := maxf(_normal_min - value, value - _normal_max) / span
+		color = COLOR_DANGER if over > 0.25 else COLOR_WARN
+
+	_value.add_theme_color_override("font_color", color)
+	var sb := _bar.get_theme_stylebox("fill")
+	if sb is StyleBoxFlat:
+		(sb as StyleBoxFlat).bg_color = color
