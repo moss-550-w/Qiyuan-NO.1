@@ -1,0 +1,100 @@
+name: 导出 H5 并部署到 GitHub Pages
+
+# 触发：推送到默认分支，或在 Actions 页面手动运行
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Pages 部署所需权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个部署，新推送取消进行中的旧任务
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.6.3"        # 必须与本地编辑器版本完全一致
+  EXPORT_PRESET: "Web"          # 对应 export_presets.cfg 中的预设名
+  EXPORT_DIR: "h5"              # 导出输出目录（入口为 index.html）
+
+jobs:
+  build:
+    name: 构建 Web 导出
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 缓存 Godot 可执行文件与导出模板，避免每次重复下载约 600MB
+      - name: 缓存 Godot 与导出模板
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/bin/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-stable
+
+      - name: 下载并安装 Godot 与导出模板（缓存未命中时）
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          EDITOR="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+
+          # 编辑器（含 headless 模式）
+          wget -qO godot.zip "${BASE}/${EDITOR}.zip"
+          unzip -q godot.zip
+          mkdir -p "$HOME/.local/bin"
+          mv "${EDITOR}" "$HOME/.local/bin/godot"
+          chmod +x "$HOME/.local/bin/godot"
+
+          # 导出模板，目录名必须为 <版本>.stable
+          wget -qO templates.tpz "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          TPL_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "${TPL_DIR}"
+          mv templates/* "${TPL_DIR}/"
+
+      - name: 将 Godot 加入 PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: 导入资源
+        # 跑两遍：首遍生成导入缓存（自定义字体引用先于导入会有顺序告警，可忽略），次遍校验
+        run: |
+          godot --headless --path . --import
+          godot --headless --path . --import
+
+      - name: 导出 Web
+        run: |
+          set -euo pipefail
+          rm -rf "${EXPORT_DIR}"
+          mkdir -p "${EXPORT_DIR}"
+          godot --headless --path . --export-release "${EXPORT_PRESET}" "${EXPORT_DIR}/index.html"
+          # 阻止 GitHub Pages 的 Jekyll 处理（保险，Actions 部署本不走 Jekyll）
+          touch "${EXPORT_DIR}/.nojekyll"
+          echo "==== 导出产物 ===="
+          ls -lh "${EXPORT_DIR}"
+          test -f "${EXPORT_DIR}/index.html"   # 缺失即失败
+
+      - name: 上传 Pages 制品
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.EXPORT_DIR }}
+
+  deploy:
+    name: 部署到 GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -2,11 +2,13 @@
 .godot/
 .import/
 export.cfg
-export_presets.cfg
+# 注意：export_presets.cfg 必须提交，CI 导出依赖它（含 Web 预设，无敏感信息）
 
-# 导出产物
+# 导出产物（CI 自动构建并部署到 Pages，无需提交）
 /build/
 /export/
+/h5/
+/win/
 *.exe
 *.app
 *.pck
