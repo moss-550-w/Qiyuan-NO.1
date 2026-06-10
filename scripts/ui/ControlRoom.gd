@@ -12,6 +12,7 @@ const BRIEFING_SCENE := preload("res://scenes/components/BriefingCard.tscn")
 const MANUAL_SCENE := preload("res://scenes/panels/ManualPanel.tscn")
 const LOG_SCENE := preload("res://scenes/panels/LogPanel.tscn")
 const POPUP_SCENE := preload("res://scenes/components/PopupTag.tscn")
+const PLASMA_SCENE := preload("res://scenes/fx/PlasmaCore.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
 @onready var _title: Label = $Root/Main/Header/Title
@@ -36,6 +37,7 @@ var _actual: Dictionary = {"q": 1.0, "stability": 1.0, "fuel": 1.0}
 var _predicting: bool = false
 var _manual: ManualPanel = null
 var _log_panel: LogPanel = null
+var _plasma: PlasmaCore = null
 
 # 时间压力
 var _timed: bool = false          # 本轮是否限时
@@ -55,6 +57,11 @@ func _ready() -> void:
 	add_child(_manual)
 	_log_panel = LOG_SCENE.instantiate()
 	add_child(_log_panel)
+	# 等离子体特效作为背景层（置于 BG 之上、UI 之下）
+	_plasma = PLASMA_SCENE.instantiate()
+	add_child(_plasma)
+	move_child(_plasma, 1)
+	_plasma.position = Vector2(960, 540)
 	_build_gauges()
 	_wire_zones()
 
@@ -69,6 +76,7 @@ func _ready() -> void:
 	_btn_log.visible = bool(
 		DataManager.get_difficulty(GameState.difficulty).get("show_history_log", false)
 	)
+	AudioManager.play_bgm("control")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -377,6 +385,8 @@ func _settle() -> void:
 	GameState.set_metrics(pred["q"], pred["stability"], pred["fuel"])
 	_refresh_gauges()
 	_show_actual()
+	if _plasma:
+		_plasma.set_state(float(pred["stability"]))
 
 
 ## 刷新全部仪表：物理仪表按故障残余偏移，Q值/稳定度按结算指标

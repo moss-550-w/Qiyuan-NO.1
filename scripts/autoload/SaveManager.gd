@@ -14,7 +14,9 @@ signal achievement_unlocked(id: String)
 var settings := {
 	"difficulty": "novice",
 	"master_volume": 1.0,
+	"bgm_volume": 0.5,
 	"time_limit_enabled": true,
+	"particle_quality": "high",
 }
 
 

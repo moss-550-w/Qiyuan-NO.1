@@ -30,6 +30,7 @@ func _ready() -> void:
 	_btn_replay.pressed.connect(_on_replay)
 	_btn_menu.pressed.connect(_on_menu)
 	AudioManager.play("ending")
+	AudioManager.play_bgm("ending")
 
 
 ## 三根因识破清单（✓ 已识破 / ✗ 未识破）

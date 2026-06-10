@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cpopuptag0qy1"]
+[gd_scene format=3 uid="uid://cpopuptag0qy1"]
 
 [ext_resource type="Script" path="res://scripts/ui/PopupTag.gd" id="1_pt"]
 

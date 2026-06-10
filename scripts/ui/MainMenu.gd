@@ -26,6 +26,7 @@ func _ready() -> void:
 	_btn_difficulty.pressed.connect(_on_cycle_difficulty)
 	_btn_refresh.pressed.connect(_run_self_check)
 	_run_self_check()
+	AudioManager.play_bgm("menu")
 
 
 ## 启动自检：检查 DataManager 状态、构建仪表演示、刷新按钮状态
