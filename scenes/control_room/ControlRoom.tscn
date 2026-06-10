@@ -59,6 +59,14 @@ text = "启元一号 · 中控台　|　第 1 轮"
 theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
 theme_override_font_sizes/font_size = 30
 
+[node name="TimerLabel" type="Label" parent="Root/Main/Header"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "⏱ --:--"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.682353, 0.788235, 0.882353, 1)
+theme_override_font_sizes/font_size = 24
+
 [node name="BtnLog" type="Button" parent="Root/Main/Header"]
 custom_minimum_size = Vector2(150, 40)
 layout_mode = 2

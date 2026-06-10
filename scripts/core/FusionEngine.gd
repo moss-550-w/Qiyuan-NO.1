@@ -79,4 +79,4 @@ static func predict_with_extra(extra_part: String, extra_amount: int) -> Diction
 	if extra_part != "" and alloc.has(extra_part):
 		alloc[extra_part] = int(alloc[extra_part]) + extra_amount
 	var fault_offsets: Dictionary = FaultTree.metric_offsets(GameState.current_round, alloc)
-	return predict(alloc, 0, false, DataManager.get_balance(), fault_offsets)
+	return predict(alloc, 0, GameState.round_delayed, DataManager.get_balance(), fault_offsets)

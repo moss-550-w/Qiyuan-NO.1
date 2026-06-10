@@ -11,9 +11,11 @@ const TOKEN_SCENE := preload("res://scenes/components/BudgetToken.tscn")
 const BRIEFING_SCENE := preload("res://scenes/components/BriefingCard.tscn")
 const MANUAL_SCENE := preload("res://scenes/panels/ManualPanel.tscn")
 const LOG_SCENE := preload("res://scenes/panels/LogPanel.tscn")
+const POPUP_SCENE := preload("res://scenes/components/PopupTag.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
 @onready var _title: Label = $Root/Main/Header/Title
+@onready var _timer_label: Label = $Root/Main/Header/TimerLabel
 @onready var _btn_log: Button = $Root/Main/Header/BtnLog
 @onready var _btn_manual: Button = $Root/Main/Header/BtnManual
 @onready var _btn_submit: Button = $Root/Main/Header/BtnSubmit
@@ -34,6 +36,14 @@ var _actual: Dictionary = {"q": 1.0, "stability": 1.0, "fuel": 1.0}
 var _predicting: bool = false
 var _manual: ManualPanel = null
 var _log_panel: LogPanel = null
+
+# 时间压力
+var _timed: bool = false          # 本轮是否限时
+var _time_left: float = 0.0
+# 本轮各物理仪表噪声偏移系数（总工模式）
+var _round_noise: Dictionary = {}
+# 各部位当前浮动科普标签：part_id → PopupTag
+var _popups: Dictionary = {}
 
 
 func _ready() -> void:
@@ -87,6 +97,45 @@ func _process(_dt: float) -> void:
 	if _predicting and not get_viewport().gui_is_dragging():
 		_predicting = false
 		_show_actual()
+	_tick_timer(_dt)
+
+
+## 倒计时：手册/日志打开时暂停；归零自动提交并施加延迟惩罚
+func _tick_timer(dt: float) -> void:
+	if not _timed or _btn_submit.disabled:
+		return
+	if _manual.visible or _log_panel.visible:
+		return
+	_time_left -= dt
+	if _time_left <= 0.0:
+		_time_left = 0.0
+		_update_timer_label()
+		_on_timeout()
+	else:
+		_update_timer_label()
+
+
+func _update_timer_label() -> void:
+	if not _timed:
+		_timer_label.text = "⏱ 不限时"
+		_timer_label.add_theme_color_override("font_color", Color(0.45, 0.52, 0.62))
+		return
+	var total: int = int(ceil(_time_left))
+	_timer_label.text = "⏱ %02d:%02d" % [total / 60, total % 60]
+	var col := Color(0.85, 0.89, 0.94)
+	if _time_left <= 30.0:
+		col = Color(0.90, 0.25, 0.25)
+	elif _time_left <= 60.0:
+		col = Color(0.95, 0.80, 0.25)
+	_timer_label.add_theme_color_override("font_color", col)
+
+
+## 限时耗尽：标记延迟、重算（稳定度惩罚）、自动提交
+func _on_timeout() -> void:
+	GameState.round_delayed = true
+	AudioManager.play("alarm")
+	_settle()
+	_on_submit()
 
 
 # ---------------------------------------------------------------------------
@@ -133,10 +182,11 @@ func _rebuild_pool() -> void:
 # 轮次流程
 # ---------------------------------------------------------------------------
 
-## 开始第 r 轮：重置经费分配、施加故障、刷新全部显示
+## 开始第 r 轮：重置经费分配、施加故障、设置限时/噪声/提示、刷新全部显示
 func _start_round(r: int) -> void:
 	GameState.start_round(r)
 	_btn_submit.disabled = false
+	_clear_popups()
 	_title.text = "启元一号 · 中控台　|　第 %d 轮 / %d" % [r, GameState.TOTAL_ROUNDS]
 
 	var fault_round: Dictionary = FaultTree.round_data(r)
@@ -144,12 +194,56 @@ func _start_round(r: int) -> void:
 		fault_round.get("title", "第 %d 轮" % r),
 		_round_intro(r),
 	]
+	_setup_timer(r)
+	_setup_noise()
 	_build_briefings(r)
+	_apply_hints(r)
 	_rebuild_pool()
 	for z in _zones:
 		z.refresh()
 	_settle()
 	SaveManager.save_game()   # 每轮开始即存档，支持退出续档
+
+
+## 按难度+本轮配置启动限时（难度 time_limit=0 或全局关闭则不限时）
+func _setup_timer(r: int) -> void:
+	var diff: Dictionary = DataManager.get_difficulty(GameState.difficulty)
+	var enabled: bool = bool(SaveManager.settings.get("time_limit_enabled", true))
+	var diff_limit: float = float(diff.get("time_limit", 0))
+	_timed = enabled and diff_limit > 0.0
+	if _timed:
+		# 难度启用限时后，具体时长取本轮 rounds 配置（缺省回退难度值）
+		var rounds_cfg: Variant = DataManager.get_config("rounds")
+		var per_round: float = diff_limit
+		if rounds_cfg is Dictionary:
+			for rr in (rounds_cfg as Dictionary).get("rounds", []):
+				if int((rr as Dictionary).get("round", -1)) == r:
+					per_round = float((rr as Dictionary).get("time_limit", diff_limit))
+		_time_left = per_round
+	_update_timer_label()
+
+
+## 总工模式：为各物理仪表生成本轮固定噪声偏移
+func _setup_noise() -> void:
+	_round_noise.clear()
+	var noise: float = float(DataManager.get_difficulty(GameState.difficulty).get("gauge_noise", 0.0))
+	for id in _gauge_base:
+		_round_noise[id] = randf_range(-noise, noise) if noise > 0.0 else 0.0
+
+
+## 新手模式：在本轮故障的修复部位显示"建议排查"角标
+func _apply_hints(r: int) -> void:
+	var show_hint: bool = bool(DataManager.get_difficulty(GameState.difficulty).get("show_hint_dash", false))
+	for z in _zones:
+		z.set_hint(false)
+	if not show_hint:
+		return
+	var causes: Dictionary = DataManager.get_faults().get("root_causes", {})
+	for c in FaultTree.round_active_causes(r):
+		var fix_part: String = (causes.get(c, {}) as Dictionary).get("fix_part", "")
+		for z in _zones:
+			if z.part_id == fix_part:
+				z.set_hint(true)
 
 
 ## 生成并显示本轮四份专家简报
@@ -218,6 +312,41 @@ func _on_token_dropped(part_id: String, amount: int) -> void:
 		_refresh_zone(part_id)
 		_rebuild_pool()
 		_settle()
+		_show_popup(part_id)
+
+
+## 在部位上方浮现该部位的上下文科普标签（popups.json）
+func _show_popup(part_id: String) -> void:
+	var popups: Variant = DataManager.get_config("popups")
+	if not (popups is Dictionary):
+		return
+	var data: Dictionary = (popups as Dictionary).get(part_id, {})
+	if data.is_empty():
+		return
+	# 同部位仅保留一个，先移除旧标签
+	if _popups.has(part_id) and is_instance_valid(_popups[part_id]):
+		_popups[part_id].queue_free()
+	var tag: PopupTag = POPUP_SCENE.instantiate()
+	add_child(tag)
+	tag.setup(data.get("title", ""), data.get("text", ""))
+	_position_popup(tag, part_id)
+	_popups[part_id] = tag
+
+
+## 把标签定位到对应 DropZone 的上方
+func _position_popup(tag: PopupTag, part_id: String) -> void:
+	for z in _zones:
+		if z.part_id == part_id:
+			var zpos: Vector2 = z.global_position
+			tag.global_position = Vector2(zpos.x, zpos.y - 118.0)
+			return
+
+
+func _clear_popups() -> void:
+	for k in _popups:
+		if is_instance_valid(_popups[k]):
+			_popups[k].queue_free()
+	_popups.clear()
 
 
 func _on_withdraw(part_id: String) -> void:
@@ -260,7 +389,10 @@ func _refresh_gauges() -> void:
 		elif id == "stability":
 			gauge.set_reading(float(_actual["stability"]) * 100.0)
 		else:
-			gauge.set_reading(FaultTree.gauge_reading(r, id, float(_gauge_base.get(id, 0.0))))
+			var reading: float = FaultTree.gauge_reading(r, id, float(_gauge_base.get(id, 0.0)))
+			# 总工模式叠加本轮固定噪声
+			reading *= (1.0 + float(_round_noise.get(id, 0.0)))
+			gauge.set_reading(reading)
 
 
 func _refresh_zone(part_id: String) -> void:

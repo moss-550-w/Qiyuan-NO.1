@@ -37,6 +37,9 @@ var cumulative_allocation: Dictionary = {}
 ## 已识别并处置的根因 id 集合
 var identified_causes: Array[String] = []
 
+## 本轮是否决策延迟（限时耗尽自动提交），触发稳定度惩罚
+var round_delayed: bool = false
+
 ## 历史运行日志（总工模式查阅）：每条 {round, gauge, value, note}
 var run_log: Array = []
 
@@ -71,6 +74,7 @@ func reset(diff: String = "novice") -> void:
 func start_round(index: int) -> void:
 	current_round = index
 	budget_remaining = total_budget
+	round_delayed = false
 	for p in PARTS:
 		round_allocation[p] = 0
 	round_changed.emit(index)

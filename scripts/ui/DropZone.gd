@@ -18,6 +18,7 @@ signal withdraw_requested(part_id: String)
 @onready var _name: Label = $Margin/VBox/Name
 @onready var _invest: Label = $Margin/VBox/Invest
 @onready var _bar: ProgressBar = $Margin/VBox/Health
+@onready var _suggest: Label = $SuggestBadge
 
 const COLOR_LOW := Color(0.90, 0.25, 0.25)    # 健康度低 红
 const COLOR_MID := Color(0.95, 0.80, 0.25)    # 中 黄
@@ -51,6 +52,12 @@ func refresh() -> void:
 	var sb := _bar.get_theme_stylebox("fill")
 	if sb is StyleBoxFlat:
 		(sb as StyleBoxFlat).bg_color = color
+
+
+## 新手模式：标记本部位为"建议排查"（显示角标）
+func set_hint(on: bool) -> void:
+	if is_node_ready():
+		_suggest.visible = on
 
 
 # --- Godot 拖放接口 ---
