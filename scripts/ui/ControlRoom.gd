@@ -140,14 +140,16 @@ func _on_submit() -> void:
 		_info.text += "　" + feedback
 
 
-## 末轮结束（D5 接 EndingResolver + 结局面板，此处先占位汇总）
-func _finish(last_feedback: String) -> void:
+## 末轮结束：判定结局矩阵，解锁成就，切换到结局面板
+func _finish(_last_feedback: String) -> void:
 	_btn_submit.disabled = true
-	var identified: int = GameState.identified_causes.size()
-	var total: int = GameState.ROOT_CAUSES.size()
-	_info.text = "[color=#2bd6ff]■ 全部 %d 轮结束[/color]　%s　最终 Q=%.2f　识破根因 %d/%d　[color=#8893a5]（结局面板 D5 实现）[/color]" % [
-		GameState.TOTAL_ROUNDS, last_feedback, float(_actual["q"]), identified, total,
-	]
+	GameState.set_metrics(_actual["q"], _actual["stability"], _actual["fuel"])
+	var key: String = EndingResolver.build_key(
+		float(_actual["q"]), GameState.identified_causes.size()
+	)
+	SaveManager.unlock_achievement(key)
+	AudioManager.play("ending")
+	get_tree().change_scene_to_file("res://scenes/panels/EndingPanel.tscn")
 
 
 # ---------------------------------------------------------------------------
