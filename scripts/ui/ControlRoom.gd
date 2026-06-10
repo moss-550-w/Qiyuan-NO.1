@@ -13,10 +13,12 @@ const MANUAL_SCENE := preload("res://scenes/panels/ManualPanel.tscn")
 const LOG_SCENE := preload("res://scenes/panels/LogPanel.tscn")
 const POPUP_SCENE := preload("res://scenes/components/PopupTag.tscn")
 const PLASMA_SCENE := preload("res://scenes/fx/PlasmaCore.tscn")
+const TOKAMAK_SCENE := preload("res://scenes/fx/TokamakAnimation.tscn")
 const TOKEN_FACE := 10   # 单枚代币面额
 
 @onready var _title: Label = $Root/Main/Header/Title
 @onready var _timer_label: Label = $Root/Main/Header/TimerLabel
+@onready var _alarm_banner: Panel = $AlarmBanner
 @onready var _btn_log: Button = $Root/Main/Header/BtnLog
 @onready var _btn_manual: Button = $Root/Main/Header/BtnManual
 @onready var _btn_submit: Button = $Root/Main/Header/BtnSubmit
@@ -38,6 +40,12 @@ var _predicting: bool = false
 var _manual: ManualPanel = null
 var _log_panel: LogPanel = null
 var _plasma: PlasmaCore = null
+var _tokamak: TokamakAnimation = null
+
+# 破裂报警
+var _disrupt_threshold: float = 0.4
+var _alarming: bool = false
+var _alarm_t: float = 0.0
 
 # 时间压力
 var _timed: bool = false          # 本轮是否限时
@@ -57,11 +65,24 @@ func _ready() -> void:
 	add_child(_manual)
 	_log_panel = LOG_SCENE.instantiate()
 	add_child(_log_panel)
-	# 等离子体特效作为背景层（置于 BG 之上、UI 之下）
+	# 等离子体粒子 + 托卡马克剖面动画作为背景层（BG 之上、UI 之下）
 	_plasma = PLASMA_SCENE.instantiate()
 	add_child(_plasma)
 	move_child(_plasma, 1)
 	_plasma.position = Vector2(960, 540)
+	# 实时托卡马克剖面：按稳定度反映三档运行态，破裂时联动报警
+	_tokamak = TOKAMAK_SCENE.instantiate()
+	add_child(_tokamak)
+	move_child(_tokamak, 2)
+	_tokamak.start_live()
+	_tokamak.modulate.a = 0.5
+
+	# 破裂报警阈值与横幅样式
+	_disrupt_threshold = float(
+		DataManager.get_balance().get("stability", {}).get("disruption_threshold", 0.4)
+	)
+	_setup_alarm_banner()
+
 	_build_gauges()
 	_wire_zones()
 
@@ -106,6 +127,7 @@ func _process(_dt: float) -> void:
 		_predicting = false
 		_show_actual()
 	_tick_timer(_dt)
+	_pulse_alarm(_dt)
 
 
 ## 倒计时：手册/日志打开时暂停；归零自动提交并施加延迟惩罚
@@ -144,6 +166,57 @@ func _on_timeout() -> void:
 	AudioManager.play("alarm")
 	_settle()
 	_on_submit()
+
+
+# ---------------------------------------------------------------------------
+# 破裂报警
+# ---------------------------------------------------------------------------
+
+func _setup_alarm_banner() -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.62, 0.10, 0.10, 0.92)
+	sb.set_border_width_all(2)
+	sb.border_color = Color(1.0, 0.45, 0.35, 1.0)
+	sb.set_corner_radius_all(8)
+	_alarm_banner.add_theme_stylebox_override("panel", sb)
+	_alarm_banner.visible = false
+
+
+## 进入/解除破裂报警（仅在状态切换时触发音效与弹窗，避免刷屏）
+func _set_alarm(on: bool) -> void:
+	if on == _alarming:
+		return
+	_alarming = on
+	_alarm_banner.visible = on
+	if on:
+		AudioManager.play("alarm")
+		AudioManager.play("disruption")
+		_show_event_popup("evt_disruption")
+
+
+## 报警横幅脉动（_process 调用）
+func _pulse_alarm(dt: float) -> void:
+	if not _alarming:
+		return
+	_alarm_t += dt
+	_alarm_banner.modulate.a = 0.6 + 0.4 * absf(sin(_alarm_t * 4.0))
+
+
+## 事件型浮动科普（如 evt_disruption），置于屏幕上方居中，同事件不重复弹
+func _show_event_popup(event_id: String) -> void:
+	var popups: Variant = DataManager.get_config("popups")
+	if not (popups is Dictionary):
+		return
+	var data: Dictionary = (popups as Dictionary).get(event_id, {})
+	if data.is_empty():
+		return
+	if _popups.has(event_id) and is_instance_valid(_popups[event_id]):
+		return
+	var tag: PopupTag = POPUP_SCENE.instantiate()
+	add_child(tag)
+	tag.setup(data.get("title", ""), data.get("text", ""))
+	tag.position = Vector2(830.0, 158.0)
+	_popups[event_id] = tag
 
 
 # ---------------------------------------------------------------------------
@@ -385,8 +458,13 @@ func _settle() -> void:
 	GameState.set_metrics(pred["q"], pred["stability"], pred["fuel"])
 	_refresh_gauges()
 	_show_actual()
+	var stability: float = float(pred["stability"])
 	if _plasma:
-		_plasma.set_state(float(pred["stability"]))
+		_plasma.set_state(stability)
+	# 实时托卡马克档位 + 破裂报警联动
+	if _tokamak:
+		var disrupting: bool = _tokamak.update_stability(stability, _disrupt_threshold)
+		_set_alarm(disrupting)
 
 
 ## 刷新全部仪表：物理仪表按故障残余偏移，Q值/稳定度按结算指标

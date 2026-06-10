@@ -27,7 +27,9 @@ var _mode: int = Mode.SUCCESS
 var _elapsed: float = 0.0
 var _done: bool = false
 var _center: Vector2 = Vector2.ZERO
-# 失败破裂关键时刻
+# 实时连续模式：作为中控台背景层，按稳定度实时映射档位，破裂档循环不一次性结束
+var _live: bool = false
+# 失败破裂关键时刻（仅结局一次性动画使用）
 const DISRUPT_START := 1.25
 const DISRUPT_PEAK := 1.55
 const DISRUPT_END := 2.0
@@ -36,6 +38,31 @@ const DISRUPT_END := 2.0
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+## 启用实时连续模式（中控台背景）：不自动结束、鼠标穿透、隐藏字幕与跳过提示
+func start_live() -> void:
+	_live = true
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if is_node_ready():
+		_caption.visible = false
+		var hint := get_node_or_null("SkipHint")
+		if hint:
+			(hint as CanvasItem).visible = false
+
+
+## 实时按稳定度更新档位（live 模式专用）。
+## s 为约束稳定度 0~1，threshold 为破裂阈值（balance.disruption_threshold）。
+## 返回是否处于破裂态（供中控台触发报警）。
+func update_stability(s: float, threshold: float) -> bool:
+	var disrupting: bool = s < threshold
+	if disrupting:
+		_mode = Mode.FAILURE
+	elif s < 0.7:
+		_mode = Mode.CRITICAL
+	else:
+		_mode = Mode.SUCCESS
+	return disrupting
 
 
 ## 由 EndingResolver.q_band_key 设定：Qgt11→SUCCESS / Q1to11→CRITICAL / Qlt1→FAILURE
@@ -86,8 +113,12 @@ func _draw() -> void:
 	_draw_field_lines(base_r)
 	_draw_plasma(base_r)
 
+	# 破裂特效：结局走定时一次性序列，live 走持续循环
 	if _mode == Mode.FAILURE:
-		_draw_disruption(base_r)
+		if _live:
+			_draw_live_disruption(base_r)
+		else:
+			_draw_disruption(base_r)
 
 
 ## 环形真空室（双层环）
@@ -100,8 +131,8 @@ func _draw_vacuum_vessel(r: float) -> void:
 func _draw_tf_coils(r: float) -> void:
 	var n := 8
 	var coil_col := COL_COIL
-	# 失败末期线圈失超变暗
-	if _mode == Mode.FAILURE and _elapsed > DISRUPT_PEAK:
+	# 失败：线圈失超变暗（结局末期 / live 破裂态持续）
+	if _mode == Mode.FAILURE and (_live or _elapsed > DISRUPT_PEAK):
 		coil_col = COL_COIL.darkened(0.5)
 	for i in n:
 		var ang: float = TWO_PI * float(i) / float(n)
@@ -134,8 +165,8 @@ func _draw_plasma(r: float) -> void:
 	var pulse: float = _plasma_pulse()
 	var core_r: float = r * pulse
 
-	# 失败坍缩：峰值后半径骤降
-	if _mode == Mode.FAILURE and _elapsed > DISRUPT_PEAK:
+	# 失败坍缩：峰值后半径骤降（仅一次性结局动画）
+	if _mode == Mode.FAILURE and not _live and _elapsed > DISRUPT_PEAK:
 		var t: float = clampf((_elapsed - DISRUPT_PEAK) / (DISRUPT_END - DISRUPT_PEAK), 0.0, 1.0)
 		core_r = r * (1.45 - 1.3 * t) * pulse
 
@@ -150,7 +181,22 @@ func _draw_plasma(r: float) -> void:
 	draw_circle(_center, core_r * 0.35, Color(col.lightened(0.5), 0.85))
 
 
-## 失败破裂特效：屏闪 + 第一壁烧蚀火花
+## live 破裂态持续特效：周期性微屏闪 + 第一壁烧蚀火花循环迸射
+func _draw_live_disruption(r: float) -> void:
+	# 周期性屏闪（弱，避免持续刺眼）
+	var flash: float = maxf(0.0, sin(_elapsed * 6.0)) * 0.18
+	draw_rect(Rect2(Vector2.ZERO, size), Color(1.0, 0.5, 0.3, flash), true)
+	# 火花沿内壁循环迸射
+	var sparks := 24
+	for i in sparks:
+		var ang: float = TWO_PI * float(i) / float(sparks) + _elapsed * 1.5
+		var t: float = fmod(_elapsed * 2.0 + float(i) * 0.13, 1.0)
+		var from: Vector2 = _center + Vector2(cos(ang), sin(ang)) * r * 1.22
+		var to: Vector2 = _center + Vector2(cos(ang), sin(ang)) * r * (1.22 + 0.22 * t)
+		draw_line(from, to, Color(1.0, 0.6, 0.2, 1.0 - t), 2.5)
+
+
+## 失败破裂特效：屏闪 + 第一壁烧蚀火花（一次性结局动画）
 func _draw_disruption(r: float) -> void:
 	if _elapsed < DISRUPT_START or _elapsed > DISRUPT_END + 0.4:
 		return
@@ -184,7 +230,10 @@ func _flow_speed() -> float:
 	match _mode:
 		Mode.SUCCESS: return 1.2
 		Mode.CRITICAL: return 0.7
-		_: return 2.4 if _elapsed < DISRUPT_PEAK else 0.0
+		_:
+			if _live:
+				return 2.4   # live 破裂态：磁场线持续高速紊乱流动
+			return 2.4 if _elapsed < DISRUPT_PEAK else 0.0
 
 
 ## 磁场线抖动幅度（0=顺滑）
@@ -203,7 +252,10 @@ func _plasma_pulse() -> float:
 		Mode.CRITICAL:
 			return 1.0 + 0.12 * sin(_elapsed * 8.0)
 		_:
-			# 失败：破裂前骤胀
+			if _live:
+				# live 破裂态：剧烈不规则脉动（双频叠加）
+				return 1.0 + 0.22 * sin(_elapsed * 11.0) + 0.10 * sin(_elapsed * 23.0)
+			# 一次性结局：破裂前骤胀
 			if _elapsed >= DISRUPT_START and _elapsed <= DISRUPT_PEAK:
 				var t: float = (_elapsed - DISRUPT_START) / (DISRUPT_PEAK - DISRUPT_START)
 				return 1.0 + 0.45 * t
