@@ -44,7 +44,7 @@ func load_all() -> void:
 	validation_errors.clear()
 
 	for key in DATA_FILES:
-		var path := DATA_DIR + DATA_FILES[key]
+		var path: String = DATA_DIR + DATA_FILES[key]
 		var parsed: Variant = _load_json(path)
 		if parsed == null:
 			# _load_json 内部已记录具体错误
