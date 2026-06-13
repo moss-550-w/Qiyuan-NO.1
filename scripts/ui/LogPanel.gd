@@ -7,20 +7,29 @@ class_name LogPanel
 
 @onready var _dimmer: ColorRect = $Dimmer
 @onready var _btn_close: Button = $Center/Window/Margin/VBox/Header/BtnClose
+@onready var _vbox: VBoxContainer = $Center/Window/Margin/VBox
 @onready var _content: RichTextLabel = $Center/Window/Margin/VBox/Content
 
-## 趋势中关注的仪表：id → 显示名/单位
+## 趋势中关注的仪表：id → 显示名/单位/折线色
 const TRACK_GAUGES := [
-	{"id": "toroidal_field", "label": "环向场", "unit": "T", "fmt": "%.2f"},
-	{"id": "wall_temp", "label": "壁温", "unit": "℃", "fmt": "%.0f"},
-	{"id": "tritium_ratio", "label": "氚率", "unit": "", "fmt": "%.2f"},
+	{"id": "toroidal_field", "label": "环向场", "unit": "T", "fmt": "%.2f", "color": Color(0.30, 0.78, 1.00)},
+	{"id": "wall_temp", "label": "壁温", "unit": "℃", "fmt": "%.0f", "color": Color(1.00, 0.55, 0.30)},
+	{"id": "tritium_ratio", "label": "氚率", "unit": "", "fmt": "%.2f", "color": Color(0.45, 0.90, 0.50)},
 ]
+
+var _chart: TrendChart = null
 
 
 func _ready() -> void:
 	visible = false
 	_btn_close.pressed.connect(close)
 	_dimmer.gui_input.connect(_on_dimmer_input)
+	# 趋势折线图置于标题与文本快照之间
+	_chart = TrendChart.new()
+	_chart.custom_minimum_size = Vector2(0, 230)
+	_chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_vbox.add_child(_chart)
+	_vbox.move_child(_chart, 1)
 
 
 func open() -> void:

@@ -31,6 +31,9 @@ func _ready() -> void:
 	]
 	_causes.text = _build_causes_text()
 	_summary.text = "[b]科普总结[/b]\n" + str(result["summary"])
+	var ach: String = _build_achievements_text()
+	if ach != "":
+		_summary.text += "\n\n" + ach
 	_log.text = _build_log_text()
 
 	_btn_replay.pressed.connect(_on_replay)
@@ -71,6 +74,23 @@ func _build_causes_text() -> String:
 		var mark: String = "[color=#4ed36a]✓[/color]" if done else "[color=#e64040]✗[/color]"
 		lines += "%s %s\n" % [mark, FaultTree.cause_name(cid)]
 	return lines
+
+
+## 本局解锁的行为成就（无则返回空串）
+func _build_achievements_text() -> String:
+	var ids: Array = GameState.last_session_achievements
+	if ids.is_empty():
+		return ""
+	var defs: Variant = DataManager.get_config("achievements")
+	var text: String = "[b][color=#f5c63f]★ 本局解锁成就[/color][/b]\n"
+	for aid in ids:
+		var d: Dictionary = {}
+		if defs is Dictionary:
+			d = (defs as Dictionary).get(aid, {})
+		text += "[color=#f5c63f]★[/color] [b]%s[/b] —— %s\n" % [
+			d.get("name", aid), d.get("desc", "")
+		]
+	return text
 
 
 ## 各轮表现简表

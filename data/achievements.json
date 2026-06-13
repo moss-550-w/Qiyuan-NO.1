@@ -1,0 +1,19 @@
+{
+  "_comment": "行为多样性成就（庆祝独特玩法，不暗示唯一最优解）。仅存展示元数据(name/desc)；解锁条件由 GameState.evaluate_achievements() 据局内状态判定。结局矩阵键(Qxx_rootN)另由 SaveManager 直接解锁，不在此表。",
+  "deaf_ear": {
+    "name": "偏听则暗",
+    "desc": "全程对某位专家对应部位零投入，却仍达成点火（Q≥1）。"
+  },
+  "chain_hunter": {
+    "name": "耦合猎手",
+    "desc": "在同一轮内一次识破并处置两个及以上根因。"
+  },
+  "phoenix": {
+    "name": "烈火中永生",
+    "desc": "稳定度曾跌破破裂阈值，最终仍把局面挽回到安全线之上。"
+  },
+  "budget_madman": {
+    "name": "预算狂人",
+    "desc": "总经费使用低于标准线的 80%，且达成点火（Q≥1）通关。"
+  }
+}

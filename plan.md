@@ -1,242 +1,223 @@
-# 工程计划 · 聚变纪元·启元一号
+# 工程优化计划 · 聚变纪元·启元一号（V3.1 · 聚焦版）
 
-> 本文档将 `design.md` (V3.0) 的玩法方案落地为可执行的 Godot 工程计划，覆盖目录结构、场景树、数据 Schema、系统模块拆分、开发排期与风险控制。
-> 所有约束遵循 `Claude.md`：Godot 4.6+ / GDScript 优先 / 配置化驱动 / 严格离线。
-
----
-
-## 一、技术基线
-
-| 项 | 决策 | 说明 |
-|----|------|------|
-| 引擎 | Godot 4.3+，Forward+ 渲染器 | 桌面端 Jolt Physics（本项目几乎不用物理，可保持默认）|
-| 语言 | GDScript（100%） | 不引入 C#，降低导出与维护复杂度 |
-| UI | Control 节点体系 + Theme 资源 | 仪表盘/简报/手册全用 Control，便于多分辨率适配 |
-| 特效 | GPUParticles2D + 自定义 shader | 等离子体、磁场线、第一壁烧蚀 |
-| 数据 | `res://data/*.json` | `JSON.parse_string` 读取，运行期只读 |
-| 存档 | `ConfigFile` → `user://` | 存档/设置/成就，禁用任何远程同步 |
-| 分辨率 | 基准 1920×1080，`canvas_items` 拉伸 | `aspect=keep` 保证展柜全屏 |
-| 离线红线 | 无 HTTP/HTTPRequest/WebSocket/第三方 SDK | CI 阶段静态扫描关键字兜底 |
+> 本文档将 `new.md`（聚焦版优化方案）落地为**增量工程计划**。
+> 注意：本项目 **V3.0 已开发完成并交付**（已有 `win/`、`h5/` 导出产物与 GitHub Pages 部署）。
+> 因此本计划不是从零搭建，而是**在现有可运行代码库上做定向优化**，核心目标遵循 `new.md`：
+> **所有机制必须强化"有限信息下的诊断决策"核心循环，而非提供绕过思考的捷径。**
+> 所有改动遵守 `Claude.md` 红线：Godot 4.6+ / GDScript / 配置化驱动 / 严格离线 / 向下兼容。
 
 ---
 
-## 二、工程目录结构
+## 一、现状基线（V3.0 已实现）
 
-```
-res://
-├── project.godot
-├── main.tscn                      # 启动场景（主菜单）
-├── data/                          # 全部配置（非程序员可改）
-│   ├── experts.json               # 四位专家：性格、立场、头像路径
-│   ├── faults.json                # 故障树：根因→四轮表象、触发条件
-│   ├── rounds.json                # 每轮：仪表基准值、噪声、限时
-│   ├── briefings.json             # 专家简报模板（带隐瞒/夸大字段）
-│   ├── kb_glossary.json           # 运行手册：科普词条
-│   ├── kb_timeline.json           # 中国聚变成果时间线 / 辟谣 / 考研就业
-│   ├── endings.json               # 12 种结局矩阵文案
-│   ├── popups.json                # 上下文浮动科普标签文案
-│   └── difficulty.json            # 三种难度参数
-├── scenes/
-│   ├── menu/MainMenu.tscn
-│   ├── control_room/ControlRoom.tscn      # 核心中控台
-│   ├── components/
-│   │   ├── Gauge.tscn             # 单个仪表盘（可复用）
-│   │   ├── BudgetToken.tscn       # 可拖拽经费代币
-│   │   ├── DropZone.tscn          # 装置部位投放区
-│   │   ├── BriefingCard.tscn      # 专家简报卡
-│   │   ├── PopupTag.tscn          # 浮动科普标签
-│   │   └── AlarmLight.tscn        # 报警灯
-│   ├── panels/
-│   │   ├── ManualPanel.tscn       # 运行手册（可检索）
-│   │   ├── LogPanel.tscn          # 历史运行日志（总工模式）
-│   │   └── EndingPanel.tscn       # 结局面板
-│   └── fx/
-│       ├── PlasmaCore.tscn        # 等离子体粒子
-│       ├── FieldLines.tscn        # 磁场线
-│       └── WallAblation.tscn      # 第一壁烧蚀
-├── scripts/
-│   ├── autoload/
-│   │   ├── DataManager.gd         # 启动加载并校验全部 JSON（单例）
-│   │   ├── GameState.gd           # 全局运行态：轮次/Q/稳定度/根因识别（单例）
-│   │   ├── SaveManager.gd         # ConfigFile 存读档/成就（单例）
-│   │   └── AudioManager.gd        # 警报/UI 音效（单例）
-│   ├── core/
-│   │   ├── FusionEngine.gd        # 核心计算：Q值/稳定度/经费效果公式
-│   │   ├── FaultTree.gd           # 根因→表象推演、识别判定
-│   │   ├── BriefingSystem.gd      # 专家立场过滤、信息隐瞒/夸大
-│   │   └── EndingResolver.gd      # 2D 结局矩阵判定
-│   └── ui/                        # 各场景挂载脚本
-├── assets/
-│   ├── art/  (头像、剖面图、图标、Theme)
-│   ├── shaders/  (plasma.gdshader, field_lines.gdshader)
-│   └── audio/
-└── export_presets.cfg
-```
+| 模块 | 文件 | 现状 |
+|------|------|------|
+| 数据加载校验 | `scripts/autoload/DataManager.gd` | 10 份 JSON 加载 + 结构校验，运行期只读 |
+| 全局状态 | `scripts/autoload/GameState.gd` | 轮次/Q/稳定度/燃料/经费/根因识别/历史日志 |
+| 存档成就 | `scripts/autoload/SaveManager.gd` | ConfigFile 本地存档；成就=已解锁结局键 |
+| 核心计算 | `scripts/core/FusionEngine.gd` | 经费边际递减→Q/稳定/燃料；含实时悬停预测 |
+| 故障树 | `scripts/core/FaultTree.gd` | 根因→表象偏移、指标惩罚、识别判定 |
+| 专家简报 | `scripts/core/BriefingSystem.gd` | **隐瞒/夸大**机制（专家会说谎） |
+| 结局矩阵 | `scripts/core/EndingResolver.gd` | 3 Q区间 × 4 识别数 = 12 结局 |
+| 中控台 | `scripts/ui/ControlRoom.gd` | 拖放分配 + **实时悬停预测** + 限时 + 报警 |
+| 历史日志 | `scripts/ui/LogPanel.gd` | 各轮读数快照（文本，无曲线图） |
+| 难度 | `data/difficulty.json` | novice/chief/custom；chief 噪声=`randf` 随机 |
 
-**约定**：`scripts/autoload/` 全部注册为单例（Project Settings → Autoload）；场景脚本只做视图与交互，业务逻辑下沉到 `scripts/core/`。
+**结论**：核心循环、数据流、导出链路均已跑通。本轮优化是**机制深化与信息系统重构**，不动工程骨架。
 
 ---
 
-## 三、核心数据流（单向）
+## 二、12 项优化与现有实现的关系（开工前必读）
 
-```
-启动 → DataManager 加载校验 JSON
-       ↓
-GameState 初始化本局（难度/轮次=1）
-       ↓
-[每轮循环]
-  BriefingSystem 据 experts+faults+难度 生成四份简报
-       ↓
-  玩家拖放 BudgetToken → DropZone 触发 FusionEngine 实时预测
-       ↓
-  玩家提交/超时 → FaultTree 推演下一轮表象、记录根因识别
-       ↓
-  GameState 更新 Q/稳定度/经费 → 刷新仪表与 FX
-       ↓
-  轮次<4 ? 回到顶部 : EndingResolver 判定 → EndingPanel
-       ↓
-SaveManager 写入存档/成就
-```
+> 类型：**新增**=现无此功能；**强化**=在现有基础上扩展；**推翻**=与现有已实现/已文档化行为冲突，需迁移。
 
-数据单向流动：视图层不直接改 `GameState`，统一通过 core 模块方法 + 信号回传，避免状态散乱。
+| # | new.md 优化点 | 类型 | 主要触达 |
+|---|--------------|------|---------|
+| 1 | 经费"超额投入奖励"（不跨轮累积） | 新增 | `GameState` `FaultTree` `balance.json` `ControlRoom` `Gauge` |
+| 2 | 故障链耦合可读化（2~3 组，第3轮后） | 强化 | `faults.json` `FaultTree` `ControlRoom` `BriefingSystem` |
+| 3 | 专家：信任度影响**情报精度**而非是否说谎 | **推翻** | `BriefingSystem` `GameState` `experts.json` `briefings.json` `ControlRoom` |
+| 4 | 仪表趋势图 + 噪声改为**规律周期波动** | 强化 | `LogPanel`→复盘 `ControlRoom._setup_noise` `difficulty.json` |
+| 5 | 单次**锁定预览**取代实时悬停试探 | **推翻** | `ControlRoom` `DropZone` `FusionEngine` |
+| 6 | 内生后果驱动；限时降级为**可选挑战模式** | **推翻** | `GameState` `FaultTree` `difficulty.json` `ControlRoom` |
+| 7 | 5~6 套手作剧本随机抽取 | 新增 | `data/scenarios.json` `DataManager` `GameState` `faults/briefings` |
+| 8 | 行为多样性成就（偏听则暗/耦合猎手…） | 强化 | `data/achievements.json` `SaveManager` `GameState` `EndingPanel` |
+| 9 | 教学战役（渐进解锁）+ 标准模式全开放 | 新增 | 教学数据 `MainMenu` `GameState` `ControlRoom` |
+| 10 | 逻辑一致性检测 + 复盘三图 | 新增 | `ControlRoom` 复盘面板（扩展 `LogPanel`/`EndingPanel`） |
+| 11 | 本地双人合作（分屏，无背叛） | 新增 | 新场景/模式（高成本，末期） |
+| 12 | 沙盒降级为内部开发工具 | 减法 | 调试面板（开发期 flag，不进正式包） |
 
 ---
 
-## 四、关键数据 Schema（草案）
+## 三、待确认的边界变更（开工前需拍板）
 
-> 仅定字段骨架，数值由内容同学填充。最终以 DataManager 的校验为准。
+以下三项**推翻了 V3.0 已实现且部分写入 `Claude.md` 的设计**，必须先确认再动手，否则白做返工。
 
-`experts.json`
-```json
-{
-  "magnet_eng": {
-    "name": "磁体工程师",
-    "personality": "conservative",
-    "avatar": "res://assets/art/avatars/magnet.png",
-    "bias_target": "magnet_coil",
-    "hide_signal": ["magnet_psu_aging"],
-    "exaggerate_signal": []
-  }
-}
-```
+### 决策项 A —— 专家机制：说谎 → 信任度影响精度（#3）
+- **冲突**：现 `BriefingSystem` 用 `is_hiding/is_exaggerating` 让专家**主动隐瞒/夸大**；`Claude.md` 项目描述亦明确写"隐瞒微小异常""夸大贫化"。`new.md` #3 要求**专家不说谎**，仅因信任度高低改变信息粒度（数据范围宽窄、语气确定度、对应仪表抖动）。
+- **影响**：需重写 `BriefingSystem` 立场逻辑、`briefings.json` 改为"宽/窄区间双版本"、新增专家信任度状态与变化规则、同步修订 `Claude.md` 专家描述。
+- **建议默认**：**采纳 #3**。理由：信任度博弈比"猜谎言"更贴合真实工程（专家不会蓄意造假，只是数据置信度不同），且与 #4 仪表"验证者"定位自洽。保留旧逻辑为 `legacy` 难度可选。
 
-`faults.json`（根因驱动）
-```json
-{
-  "root_causes": {
-    "magnet_psu_aging":   { "name": "磁体电源老化", "fix_part": "magnet_coil" },
-    "wall_microcrack":    { "name": "第一壁微裂纹", "fix_part": "first_wall" },
-    "tritium_pump_decay": { "name": "氚提取泵效率下降", "fix_part": "breeder_blanket" }
-  },
-  "rounds": [
-    {
-      "round": 1,
-      "symptoms": [
-        { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.08 }
-      ]
-    }
-  ]
-}
-```
+### 决策项 B —— 决策反馈：实时悬停预测 → 单次锁定预览（#5）
+- **冲突**：现 `ControlRoom._on_hover_preview` + `FusionEngine.predict_with_extra` 提供**逐次拖放实时预测**，玩家可反复试探。`new.md` #5 要求**删除实时试探**，改为"锁定方案→一次性预览(≤10s)→自动确认"，杜绝微操刷解。
+- **影响**：移除 hover 预测链路与 `DropZone.hover_preview` 用法，新增"锁定→预览→确认"状态机与短倒计时。
+- **建议默认**：**采纳 #5，但分两步**。先保留拖放即时数值回显（非预测，仅显示已投入效果），叠加"锁定预览"；彻底关掉"假想增量预测"。避免一次性砍掉手感。
 
-`endings.json`（矩阵）
-```json
-{
-  "Q_lt1__root0": { "title": "...", "summary": "..." },
-  "Q_1to11__root2": { "title": "...", "summary": "..." }
-}
-```
-矩阵键 = `Q区间(3) × 根因识别数(0-3 共4)` = 12 条。
+### 决策项 C —— 压力来源：限时默认 → 内生后果默认、限时转挑战模式（#6）
+- **冲突**：现 `novice` 不限时、`chief` 300s 限时为标准压力。`new.md` #6 要求**标准模式无外部倒计时**，压力来自失误后果（稳定度连降警告、不可逆损伤）；限时/审计风暴归入独立"挑战模式"，单独计分。
+- **影响**：`difficulty.json` 拆分"标准档"与"挑战档"；新增稳定度历史与不可逆损伤状态；限时系统保留但仅挑战档启用。
+- **建议默认**：**采纳 #6**。限时代码已存在，仅改触发条件，成本低；内生后果是纯增量。
 
-`difficulty.json`
-```json
-{
-  "novice": { "gauge_noise": 0.0, "highlight_suspect": true,  "show_hint_dash": true,  "time_limit": 0 },
-  "chief":  { "gauge_noise": 0.03, "highlight_suspect": false, "show_hint_dash": false, "time_limit": 300 }
-}
-```
+> 以上三项若全部采纳，即为本计划 Phase 2/3 的核心；若用户否决某项，对应任务从计划中剔除，不影响其余。
 
 ---
 
-## 五、核心计算模型（FusionEngine 草案）
+## 四、分阶段实施
 
-> 数值需内容同学结合 EAST/ITER 真实量级标定，此处给口径与方向，便于程序先行搭框架。
+> 原则：先做**低成本、纯增量、强化诊断核心**的项；推翻型改动集中在中段；高成本扩展（双人）置于末期。每阶段标 **验收点**。
 
-- **经费效果**：每个部位投入 `b` 单位 → 效能增益 `gain = k * (1 - exp(-b/τ))`（边际递减，避免单点堆满）。
-- **Q 值**：`Q = base_Q * f(磁体效能, 控制效能) - penalty(未修根因)`。
-- **稳定度**：受第一壁效能、控制效能、决策延迟惩罚共同影响，低于阈值触发破裂报警。
-- **燃料自持**：受氚增殖包层效能影响，过低触发氚循环预警。
-- **根因识别**：玩家在对应部位的投入达到"有效修复阈值" → 标记该根因为"已识别并处置"，计入结局纵轴。
+### Phase 1 · 诊断核心强化（纯增量，不碰已实现交互）
+**目标**：在不推翻任何现有逻辑的前提下，先把"信息验证"与"专注投入"两个核心爽点补强。
 
-所有系数集中在 `data/rounds.json` / 独立 `balance.json`，禁止硬编码进 `.gd`。
+- **T1.1 仪表趋势图（#4）**
+  - 现 `LogPanel` 仅文本快照。扩展为**复盘曲线**：每轮提交时 `GameState.add_log` 已记录 `gauges` 快照，新增按仪表绘制折线（`Control._draw` 或 `Line2D`），识别渐变 vs 突发故障。
+  - 新增"呼出上一轮快照"按钮（不要求记数值）。
+  - 文件：`scripts/ui/LogPanel.gd`、`LogPanel.tscn`。
+  - 验收：完成 ≥2 轮后，复盘面板可见各仪表跨轮折线，渐变故障趋势可读。
 
----
+- **T1.2 噪声改为规律周期波动（#4）**
+  - 现 `ControlRoom._setup_noise` 用 `randf_range` 每轮随机一次。改为**确定性低频正弦**：`offset = amp * sin(round * freq + phase[gauge])`，`amp/freq/phase` 入 `difficulty.json`，使玩家可多轮观察识别干扰模式、与真实异常区分。
+  - 仅 `chief`/挑战档启用；不引入"付费校准"。
+  - 文件：`scripts/ui/ControlRoom.gd`、`data/difficulty.json`。
+  - 验收：chief 模式下噪声跨轮呈可识别周期，novice 模式无噪声。
 
-## 六、开发排期（10 天，对齐 design.md，细化到可勾选）
+- **T1.3 超额投入奖励（#1）**
+  - 同一部位本轮投入超阈值 `bonus_threshold` → **仅影响下一轮**：该部位关联根因基础故障强度 ×(1−`bonus_relief`)，且对应仪表附"✓稳定确认"角标。不跨轮累积、不记账。
+  - `GameState` 增 `last_round_bonus: Dictionary`（part→bool），`start_round` 时结算并清零。`FaultTree.metric_offsets`/`gauge_reading` 读该减免。
+  - 文件：`GameState.gd`、`FaultTree.gd`、`balance.json`、`ControlRoom.gd`、`Gauge.gd`。
+  - 验收：对磁体超额投入后，下一轮磁体故障强度可见降低 + 仪表显示稳定确认。
 
-> P=程序，C=内容/美术。每天产出标注 **验收点**。
+- **T1.4 行为成就系统（#8）**
+  - 现成就=结局键。新增 `data/achievements.json`（id/名称/描述/触发条件类型）。`SaveManager` 增**条件型成就**评估；`GameState` 累计判定所需信号（如"某专家零采信通关""稳定度跌破阈值后回升""总经费<80%通关""识破完整故障链"）。
+  - 结局结算时统一评估并解锁，`EndingPanel` 展示本局新解成就。
+  - 文件：`data/achievements.json`、`SaveManager.gd`、`GameState.gd`、`scripts/ui/EndingPanel.gd`。
+  - 验收：满足"预算狂人"等条件通关 → 结局页弹出对应成就。
 
-### 阶段一：骨架与核心交互（D1-D3）
-- **D1** P：建工程、Autoload 四单例、`DataManager` 加载校验、`Gauge.tscn` + 数据绑定。C：中控台布局草图、视觉风格定调、四专家头像与性格草稿。
-  - 验收：空 JSON 能正常加载报错；仪表能显示假数据。
-- **D2** P：`BudgetToken` 拖放 + `DropZone` 命中 + 实时预测数值，与仪表联动。C：托卡马克剖面基础美术（矢量+粒子占位）。
-  - 验收：拖一枚代币到磁体，预测 Q 值变化并回显。
-- **D3** P：`FusionEngine` 公式落地、`FaultTree` 第一轮触发逻辑。C：第一轮故障台词、词条、仪表读数规则。
-  - 验收：完整跑通第 1 轮：分配→提交→数值结算。
+- **T1.5 逻辑一致性检测（#10）**
+  - 提交前检测"分配方向与诊断方向明显矛盾"（仪表强烈指向某根因部位、玩家却零投入且重投他处）→ 锁定/提交前温和提示，**不评判对错**，可继续。
+  - 文件：`ControlRoom.gd`（提交前钩子）、阈值入 `balance.json`。
+  - 验收：构造矛盾分配 → 提交前出现一次性温和确认提示。
 
-### 阶段二：博弈与结局（D4-D5）
-- **D4** P：`BriefingSystem`（立场过滤/隐瞒/夸大）+ `BriefingCard` 面板。C：第 2、3 轮故障配置，等离子体粒子效果。
-  - 验收：四份简报按专家偏见生成，与仪表存在可甄别偏差。
-- **D5** P：`FaultTree` 四轮串联 + `EndingResolver` 12 结局判定 + `EndingPanel`。C：第一壁裂纹/磁场线特效，结局框架文案。
-  - 验收：四轮全程贯通，落到正确结局键。
-
-### 阶段三：科普与系统（D6-D7）
-- **D6** P：`ManualPanel` 运行手册（本地检索）。C：填充全部词条、EAST/ITER 数据、辟谣内容。
-  - 验收：手册可搜索关键词并定位词条。
-- **D7** P：`SaveManager` 存读档 + 成就 + `LogPanel` 历史日志。C：12 结局科普总结文案细化。
-  - 验收：退出重进续档；总工模式可查历史趋势。
-
-### 阶段四：打磨与交付（D8-D10）
-- **D8** P：限时系统、难度切换、UI 动画与 `PopupTag` 浮动科普。C：整体 UI 美化、警报/UI 音效。
-  - 验收：三难度可切换并生效；浮标 3 秒消退/可钉住。
-- **D9** P：全流程测试、修 bug、粒子性能优化。C：文本校对、逻辑一致性、补漏科普点。
-  - 验收：HTML5 端粒子不卡顿（目标 ≥50 FPS）。
-- **D10** P：导出 Win/macOS/Linux/HTML5、打包、README。C：宣传文案、截图、玩法说明、部署。
-  - 验收：四平台产物可运行；Web 版 GitHub Pages 离线可玩。
+**Phase 1 验收里程碑（M1）**：诊断核心四件套（趋势/周期噪声/专注奖励/行为成就）上线，旧交互零回归。
 
 ---
 
-## 七、里程碑与依赖
+### Phase 2 · 信息系统重构（含推翻项，依赖决策 A/C）
+**目标**：把"信息粒度博弈"与"内生后果"做实，这是 `new.md` 的灵魂。**需决策 A、C 确认后开工。**
 
-```
-M1 (D3末) 单轮可玩闭环      —— 解锁内容同学批量填轮次配置
-M2 (D5末) 全流程+结局贯通   —— 解锁手册/存档/打磨并行
-M3 (D7末) 系统功能完整      —— 进入纯打磨与内容收口
-M4 (D10末) 全平台交付       —— 发布
-```
+- **T2.1 专家信任度系统（#3，依赖决策 A）**
+  - `GameState` 增 `expert_trust: Dictionary`（expert→0..1，初值中性）。变化规则：分配与某专家陈述一致→其信任 +；完全无视其警告→ −。
+  - 重写 `BriefingSystem`：**移除说谎逻辑**，改为按信任度选择简报"区间精度"——高信任=窄区间+确定语气，低信任=宽区间+模糊措辞。`briefings.json` 每条改为 `{precise, vague, value_hint}` 多粒度版本。
+  - **专家信息差**：每专家只精确掌握自身部位，对他部位仅间接推断（数据中标 `direct/indirect`）。
+  - 低信任→其负责仪表叠加"有规律抖动"（接 T1.2 周期波动通道，幅度随信任反比）。
+  - 文件：`BriefingSystem.gd`、`GameState.gd`、`experts.json`、`briefings.json`、`ControlRoom.gd`（信任度 UI + 抖动）。
+  - 同步：修订 `Claude.md` 专家段落（隐瞒/夸大 → 信任度精度）。
+  - 验收：连续采信某专家 → 其简报区间收窄、仪表趋稳；无视警告 → 简报转模糊、仪表抖动加剧。
 
-关键路径：`DataManager → FusionEngine → FaultTree → BriefingSystem → EndingResolver`。其中 `FusionEngine` 公式标定是最大不确定点，D3 必须冻结接口（即便数值待调），否则后续模块阻塞。
+- **T2.2 深度诊断＝趋势报告（#3）**
+  - 消耗少量经费，让某专家给出其部位**近三轮历史趋势图 + 专家解读**（不直接判定真假）。
+  - 文件：`ControlRoom.gd`（购买入口）、`LogPanel`/复盘复用 T1.1 曲线、`balance.json`（费用）。
+  - 验收：付费后弹出该部位三轮趋势 + 一句专家解读，经费相应扣减。
+
+- **T2.3 故障链耦合可读化（#2）**
+  - `faults.json` 新增 `fault_chains`：每链含触发轮(≥3)、主因→次因、**可区分仪表特征**（如"磁体电流波动 且 壁温周期尖峰与之同步")、专家线索（双方各自抱怨但不主动关联）。
+  - `FaultTree` 增链激活判定与"次因偏移随主因强度联动"；`ControlRoom` 在仪表上以同步标记呈现关联模式。**不做全连接耦合**，每链一种可识别模式。
+  - 验收：第3轮后出现一组故障链，交叉比对仪表可发现主次关联，处理优先级影响结算。
+
+- **T2.4 内生后果与挑战模式拆分（#6，依赖决策 C）**
+  - `GameState` 增 `stability_history`、`irreversible_damage: Dictionary`（part→level）。规则：稳定度连续两轮下降→"约束退化"警告；某部位严重投入不足累计→"不可逆损伤"标记，抬高后续轮该部位故障强度。
+  - `difficulty.json` 重构：标准档（无限时、内生后果）/ 挑战档（破裂倒计时、经费审计风暴，单独计分）。限时代码保留，仅挑战档启用。
+  - 文件：`GameState.gd`、`FaultTree.gd`、`difficulty.json`、`ControlRoom.gd`。
+  - 验收：标准档零倒计时；连续误判触发退化警告；不可逆损伤后续轮可见恶化；挑战档限时如常。
+
+**Phase 2 验收里程碑（M2）**：专家从"测谎对象"变为"信息源博弈"，压力从外部计时转为内生后果，故障具备可推理的耦合层次。
 
 ---
 
-## 八、风险与对策
+### Phase 3 · 交互范式与可重玩（含推翻项，依赖决策 B）
+**目标**：收束决策手感，提升重玩价值。
+
+- **T3.1 锁定预览取代实时试探（#5，依赖决策 B）**
+  - 移除 `_on_hover_preview` 假想增量预测与 `DropZone.hover_preview` 试探用法；保留"已投入即时效果回显"。
+  - 新增"锁定方案"按钮 → 一次性预览（等离子体颜色、稳定度趋势、各部位参数升降箭头），短倒计时（≤10s，参数化）逾期自动确认；预览期不可再调。
+  - 删除分配中实时仪表跳动、中期检查。
+  - 文件：`ControlRoom.gd`、`DropZone.gd`、`FusionEngine.gd`（保留 `predict`，弃用 `predict_with_extra` 的悬停调用）。
+  - 验收：拖放期无预测试探；点锁定后出现一次预览+倒计时，逾期自动提交。
+
+- **T3.2 手作剧本随机（#7）**
+  - 新增 `data/scenarios.json`：5~6 套，每套含 3 根因内部逻辑、专家立场分配（谁模糊/谁精确）、专属台词集与仪表初始偏移、1~2 组耦合链。
+  - `DataManager` 加载 `scenarios`；`GameState.reset` 随机抽取一套（专家**人设固定、角色由剧本驱动**）；`faults/briefings` 取数改为"当前剧本优先，缺省回退基础表"。
+  - **隐藏结局**：由系统状态自然触发（如某部位连续零投入后爆裂意外触发新约束构型），`EndingResolver` 增隐藏键。
+  - 文件：`data/scenarios.json`、`DataManager.gd`、`GameState.gd`、`FaultTree.gd`、`BriefingSystem.gd`、`EndingResolver.gd`。
+  - 验收：连开两局剧本不同（台词/立场/链不同）；满足隐藏条件触发专属结局。
+
+- **T3.3 复盘三图 + 教学模式（#10、#9）**
+  - 复盘面板（扩展或新建）展示三图：分配比例图、实际故障强度变化图、关键仪表趋势曲线，**无"最优方案"标注**，纯视觉对比教学。
+  - 教学战役（可选）：三章渐进解锁（2专家2部位→3→全系统），脚本化引导；标准模式开局全开放 + T1.5 智能引导。`MainMenu` 增模式入口，`GameState` 增子系统解锁门控。
+  - 文件：复盘面板（`LogPanel.tscn`/新 `ReviewPanel`）、`MainMenu.gd`、`GameState.gd`、`ControlRoom.gd`、教学脚本数据。
+  - 验收：结算后可调出三图对比；教学战役按章逐步开放系统；标准模式直接全开放。
+
+**Phase 3 验收里程碑（M3）**：决策不可反复试探、每局剧本新鲜、教学与复盘闭环。
+
+---
+
+### Phase 4 · 扩展与减法（末期，可裁剪）
+
+- **T4.1 本地双人合作（#11）**：单设备分屏，P1/P2 各看部分仪表与专家简报，口头交流拼合，共同决定分配；**无背叛、无隐藏计分**。高成本，独立场景，置于最后，资源不足可砍。
+- **T4.2 沙盒降级（#12）**：**不开发独立沙盒**。将参数调试/故障模拟封装为开发期内部工具（`debug` flag 控制，不进正式导出包），抢先体验阶段向核心社区开放收集反馈。
+
+---
+
+## 五、数据 Schema 变更汇总
+
+**新增文件**
+- `data/scenarios.json`（#7）：剧本数组，每套 `{id, root_logic, expert_roles, briefings_override, gauge_offset, chains}`。
+- `data/achievements.json`（#8）：`{id, name, desc, condition:{type, params}}`。
+
+**修改文件**
+- `difficulty.json`：拆 标准/挑战 两类档；噪声改 `{amp, freq, phase}` 周期参数（替换单一 `gauge_noise`）；限时仅挑战档。
+- `balance.json`：新增 `over_invest`（`bonus_threshold`/`bonus_relief`）、`deep_diagnose_cost`、`consistency_check` 阈值、`irreversible_damage` 参数。
+- `faults.json`：新增 `fault_chains` 段（主次因 + 同步特征）。
+- `experts.json`：每专家增 `info_scope`（direct/indirect 部位）、移除/降级 `hide_signal`/`exaggerate_signal`（决策 A 后）。
+- `briefings.json`：每条由单 `spin` 改为多粒度 `{precise, vague, value_hint}`（决策 A 后）。
+- `endings.json`：增隐藏结局键（#7）。
+
+**校验**：`DataManager._validate` 同步新增剧本/成就/链的结构校验，缺字段明确报错（沿用现有 `_require_*` 风格）。
+
+---
+
+## 六、风险与对策
 
 | 风险 | 影响 | 对策 |
 |------|------|------|
-| 数值平衡难调（Q/稳定度手感） | 高 | 公式接口 D3 冻结，系数全外置 `balance.json`，留调参热加载 |
-| 故障树耦合逻辑复杂易乱 | 高 | 先用"根因→表象"纯数据表驱动，禁止散落 if-else |
-| HTML5 粒子性能 | 中 | 粒子数上限可配；Web 端降级开关；提前 D9 前抽测 |
-| 内容产能跟不上程序 | 中 | D1 先定全部 JSON Schema，内容同学并行填充不等程序 |
-| 拖放交互在 Web 触控端体验 | 中 | DropZone 命中容差放大；保留点击分配兜底 |
-| 误引入网络依赖 | 红线 | 导出前静态扫描 `HTTPRequest/WebSocket/http` 关键字 |
+| 决策 A/B/C 未确认即开工 | 高（返工） | Phase 2/3 开工前必须拍板第三节三项；未定则只做 Phase 1 |
+| 信任度系统使难度失衡 | 高 | 信任度→精度映射全入 `balance.json`，留调参；保 `legacy` 隐瞒模式回退 |
+| 剧本化与现有单故障树取数耦合 | 中 | `scenarios` 走"覆盖+回退基础表"，缺省即等价 V3.0，向下兼容 |
+| 锁定预览砍掉手感 | 中 | 分两步：先保即时效果回显，再叠锁定预览，灰度切换 |
+| 趋势图/复盘绘制 HTML5 性能 | 中 | 用轻量 `_draw`/`Line2D`，点数上限可配，D 前 Web 抽测 |
+| 双人模式成本挤压核心 | 中 | 置 Phase 4 且标"可裁剪"，核心优化不依赖它 |
+| 误引入网络依赖 | 红线 | 导出前静态扫描 `HTTPRequest/WebSocket/http`，沿用现有 CI 兜底 |
+| `Claude.md` 描述与新机制脱节 | 低 | 决策 A 落地时同步修订项目文档专家段落 |
 
 ---
 
-## 九、下一步（立即执行）
+## 七、落地顺序建议（立即可执行）
 
-1. 建立 `res://` 工程与目录骨架、注册四个 Autoload 单例。
-2. 落地 `DataManager.gd`：加载 + Schema 校验 + 缺字段报错。
-3. 产出全部 `data/*.json` 的**空骨架文件**（字段齐全、数值占位），供内容同学并行填充。
-4. 实现 `Gauge.tscn` + 假数据绑定，验证数据流通。
+1. **先确认第三节决策 A/B/C**（采纳/否决/默认），确定 Phase 2/3 范围。
+2. **直接开工 Phase 1**（T1.1→T1.5，纯增量、零推翻、不阻塞决策）：先上趋势图与周期噪声，立即强化"仪表验证者"地位。
+3. 决策确认后进入 Phase 2（信息系统重构），再 Phase 3（交互范式 + 剧本）。
+4. Phase 4 视余量决定是否纳入。
 
-> 经确认后，建议从第 1、2、3 步开始落地——先把"配置化骨架"立起来，内容与程序即可并行。
+> 关键路径：`决策确认 → BriefingSystem 重构(T2.1) → scenarios 数据架构(T3.2) → 锁定预览(T3.1)`。
+> 其中 **T2.1 信任度模型**是最大不确定点，需先冻结"信任度→精度"映射接口，再铺数据。
+
+*本文件随项目推进持续更新；与 `new.md`（方案）、`Claude.md`（约束）配套阅读。*

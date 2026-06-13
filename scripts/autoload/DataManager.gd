@@ -20,6 +20,7 @@ const DATA_FILES := {
 	"popups": "popups.json",
 	"difficulty": "difficulty.json",
 	"balance": "balance.json",
+	"achievements": "achievements.json",
 }
 
 const DATA_DIR := "res://data/"

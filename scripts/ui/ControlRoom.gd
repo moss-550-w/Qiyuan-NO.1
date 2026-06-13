@@ -54,6 +54,8 @@ var _time_left: float = 0.0
 var _round_noise: Dictionary = {}
 # 各部位当前浮动科普标签：part_id → PopupTag
 var _popups: Dictionary = {}
+# 本轮已确认过"逻辑一致性提示"的轮次（避免重复打扰）
+var _consistency_confirmed_round: int = -1
 
 
 func _ready() -> void:
@@ -160,12 +162,12 @@ func _update_timer_label() -> void:
 	_timer_label.add_theme_color_override("font_color", col)
 
 
-## 限时耗尽：标记延迟、重算（稳定度惩罚）、自动提交
+## 限时耗尽：标记延迟、重算（稳定度惩罚）、自动提交（跳过一致性提示）
 func _on_timeout() -> void:
 	GameState.round_delayed = true
 	AudioManager.play("alarm")
 	_settle()
-	_on_submit()
+	_do_submit()
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +285,22 @@ func _start_round(r: int) -> void:
 	for z in _zones:
 		z.refresh()
 	_settle()
+	_apply_stable_confirm(r)
 	SaveManager.save_game()   # 每轮开始即存档，支持退出续档
+
+
+## 超额投入奖励：对上一轮超额投入部位所关联的仪表显示"稳定确认"角标
+func _apply_stable_confirm(r: int) -> void:
+	var confirmed: Dictionary = {}
+	var causes: Dictionary = DataManager.get_faults().get("root_causes", {})
+	for s in FaultTree.round_symptoms(r):
+		var sd: Dictionary = s
+		var gauge: String = sd.get("gauge", "")
+		var fix_part: String = (causes.get(sd.get("cause", ""), {}) as Dictionary).get("fix_part", "")
+		if gauge != "" and fix_part != "" and GameState.over_invest_bonus(fix_part):
+			confirmed[gauge] = true
+	for id in _gauges:
+		(_gauges[id] as Gauge).set_stable_confirmed(confirmed.has(id))
 
 
 ## 按难度+本轮配置启动限时（难度 time_limit=0 或全局关闭则不限时）
@@ -304,12 +321,29 @@ func _setup_timer(r: int) -> void:
 	_update_timer_label()
 
 
-## 总工模式：为各物理仪表生成本轮固定噪声偏移
+## 总工/挑战模式：为各物理仪表生成本轮干扰偏移。
+## 采用确定性低频正弦 offset = amp * sin(round*freq + phase[gauge])：
+## 跨轮平滑变化、多轮观察即可识别周期，从而与真实异常区分（不引入付费校准）。
+## 兼容旧写法：gauge_noise 若为数值则退化为固定幅度的周期。
 func _setup_noise() -> void:
 	_round_noise.clear()
-	var noise: float = float(DataManager.get_difficulty(GameState.difficulty).get("gauge_noise", 0.0))
+	var ncfg: Variant = DataManager.get_difficulty(GameState.difficulty).get("gauge_noise", 0.0)
+	var amp: float = 0.0
+	var freq: float = 1.0
+	if ncfg is Dictionary:
+		amp = float((ncfg as Dictionary).get("amp", 0.0))
+		freq = float((ncfg as Dictionary).get("freq", 1.0))
+	else:
+		amp = float(ncfg)
+	var r: int = GameState.current_round
+	var idx: int = 0
 	for id in _gauge_base:
-		_round_noise[id] = randf_range(-noise, noise) if noise > 0.0 else 0.0
+		if amp <= 0.0:
+			_round_noise[id] = 0.0
+		else:
+			# 各仪表错相位(idx*1.7)以解耦，避免所有表同步抖动
+			_round_noise[id] = amp * sin(float(r) * freq + float(idx) * 1.7)
+		idx += 1
 
 
 ## 新手模式：在本轮故障的修复部位显示"建议排查"角标
@@ -338,8 +372,56 @@ func _build_briefings(r: int) -> void:
 		card.setup(b)
 
 
-## 提交本轮：识别判定 → 记录 → 推进 / 结束
+## 玩家点"提交本轮"：先做逻辑一致性提示（仅提醒不评判），确认后再真正提交。
 func _on_submit() -> void:
+	var r: int = GameState.current_round
+	if _consistency_confirmed_round != r and _is_inconsistent(r):
+		_prompt_consistency(r)
+		return
+	_do_submit()
+
+
+## 分配方向与本轮最强表象明显矛盾时返回 true（零投修复部位、却在他处重投）
+func _is_inconsistent(r: int) -> bool:
+	var cfg: Dictionary = DataManager.get_balance().get("consistency_check", {})
+	var min_dev: float = float(cfg.get("min_indicated_deviation", 0.10))
+	var ratio: float = float(cfg.get("heavy_elsewhere_ratio", 0.5))
+	var causes: Dictionary = DataManager.get_faults().get("root_causes", {})
+	var indicated_part: String = ""
+	var max_dev: float = 0.0
+	for s in FaultTree.round_symptoms(r):
+		var d: float = absf(float((s as Dictionary).get("deviation", 0.0)))
+		if d > max_dev:
+			max_dev = d
+			indicated_part = (causes.get((s as Dictionary).get("cause", ""), {}) as Dictionary).get("fix_part", "")
+	if indicated_part == "" or max_dev < min_dev:
+		return false
+	if int(GameState.round_allocation.get(indicated_part, 0)) > 0:
+		return false
+	# indicated_part 零投入，故本轮已花经费全在他处
+	var elsewhere: int = GameState.total_budget - GameState.budget_remaining
+	return float(elsewhere) >= ratio * float(GameState.total_budget)
+
+
+## 温和的一致性确认弹窗（不评判对错，可继续）
+func _prompt_consistency(r: int) -> void:
+	var dlg := ConfirmationDialog.new()
+	dlg.title = "逻辑一致性提示"
+	dlg.dialog_text = "你的分配方向与你关注的故障似乎不一致，是否确认提交本轮？"
+	dlg.ok_button_text = "确认提交"
+	dlg.get_cancel_button().text = "返回调整"
+	add_child(dlg)
+	dlg.confirmed.connect(func() -> void:
+		_consistency_confirmed_round = r
+		dlg.queue_free()
+		_do_submit()
+	)
+	dlg.canceled.connect(func() -> void: dlg.queue_free())
+	dlg.popup_centered()
+
+
+## 提交本轮：识别判定 → 记录 → 推进 / 结束
+func _do_submit() -> void:
 	var r: int = GameState.current_round
 	var newly: Array = FaultTree.evaluate_round(r)
 	GameState.add_log({
@@ -369,6 +451,10 @@ func _finish(_last_feedback: String) -> void:
 		float(_actual["q"]), GameState.identified_causes.size()
 	)
 	SaveManager.unlock_achievement(key)
+	# 行为多样性成就：据本局状态结算并解锁，记录供结局面板展示
+	GameState.last_session_achievements = GameState.evaluate_achievements()
+	for aid in GameState.last_session_achievements:
+		SaveManager.unlock_achievement(aid)
 	SaveManager.clear_save()   # 一局完成，清除续档
 	AudioManager.play("ending")
 	get_tree().change_scene_to_file("res://scenes/panels/EndingPanel.tscn")

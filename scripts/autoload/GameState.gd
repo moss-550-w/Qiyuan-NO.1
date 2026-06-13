@@ -40,6 +40,15 @@ var identified_causes: Array[String] = []
 ## 本轮是否决策延迟（限时耗尽自动提交），触发稳定度惩罚
 var round_delayed: bool = false
 
+## 上一轮"超额投入奖励"结果：part_id → bool（仅作用于当前轮，不跨轮累积）
+var last_round_bonus: Dictionary = {}
+
+## 本局稳定度历史最低值（用于"烈火中永生"等成就判定）
+var min_stability: float = 1.0
+
+## 本局结算时解锁的行为成就 id（供结局面板展示）
+var last_session_achievements: Array = []
+
 ## 历史运行日志（总工模式查阅）：每条 {round, gauge, value, note}
 var run_log: Array = []
 
@@ -55,6 +64,7 @@ func reset(diff: String = "novice") -> void:
 	q_value = 1.0
 	stability = 1.0
 	fuel_ratio = 1.0
+	min_stability = 1.0
 
 	var diff_cfg := DataManager.get_difficulty(diff)
 	total_budget = int(diff_cfg.get("total_budget", 100))
@@ -62,16 +72,20 @@ func reset(diff: String = "novice") -> void:
 
 	round_allocation = {}
 	cumulative_allocation = {}
+	last_round_bonus = {}
 	for p in PARTS:
 		round_allocation[p] = 0
 		cumulative_allocation[p] = 0
+		last_round_bonus[p] = false
 
 	identified_causes = []
+	last_session_achievements = []
 	run_log = []
 
 
-## 进入下一轮（清空本轮分配，恢复经费）
+## 进入下一轮（先据上一轮投入结算超额奖励，再清空本轮分配、恢复经费）
 func start_round(index: int) -> void:
+	_settle_over_invest_bonus()
 	current_round = index
 	budget_remaining = total_budget
 	round_delayed = false
@@ -79,6 +93,19 @@ func start_round(index: int) -> void:
 		round_allocation[p] = 0
 	round_changed.emit(index)
 	budget_changed.emit(budget_remaining, round_allocation)
+
+
+## 据"上一轮 round_allocation"结算超额投入奖励，写入 last_round_bonus（仅作用于即将开始的这一轮）。
+## 在 round_allocation 被清零前调用。
+func _settle_over_invest_bonus() -> void:
+	var threshold: float = float(DataManager.get_balance().get("over_invest", {}).get("bonus_threshold", 50))
+	for p in PARTS:
+		last_round_bonus[p] = float(round_allocation.get(p, 0)) >= threshold
+
+
+## 某部位本轮是否享有上一轮超额投入带来的故障减免
+func over_invest_bonus(part_id: String) -> bool:
+	return bool(last_round_bonus.get(part_id, false))
 
 
 ## 尝试向某部位投入 amount 单位经费，成功返回 true
@@ -115,7 +142,45 @@ func set_metrics(q: float, stab: float, fuel: float) -> void:
 	q_value = q
 	stability = clampf(stab, 0.0, 1.0)
 	fuel_ratio = clampf(fuel, 0.0, 1.0)
+	min_stability = minf(min_stability, stability)
 	metrics_changed.emit(q_value, stability, fuel_ratio)
+
+
+## 结算行为成就：据本局状态返回应解锁的成就 id 列表（纯判定，无副作用）。
+## 与 achievements.json 的元数据对应；结局矩阵键不在此处。
+func evaluate_achievements() -> Array:
+	var unlocked: Array = []
+	var balance: Dictionary = DataManager.get_balance()
+
+	# 偏听则暗：某专家对应部位全程零投入，却仍点火（Q≥1）
+	if q_value >= 1.0:
+		var experts: Dictionary = DataManager.get_experts()
+		for eid in experts:
+			var part: String = (experts[eid] as Dictionary).get("bias_target", "")
+			if part != "" and int(cumulative_allocation.get(part, 0)) == 0:
+				unlocked.append("deaf_ear")
+				break
+
+	# 耦合猎手：某一轮一次识破≥2根因
+	for e in run_log:
+		if (e as Dictionary).get("identified", []).size() >= 2:
+			unlocked.append("chain_hunter")
+			break
+
+	# 烈火中永生：稳定度曾跌破破裂阈值，最终回到安全线之上
+	var dis: float = float(balance.get("stability", {}).get("disruption_threshold", 0.4))
+	if min_stability < dis and stability >= 0.7:
+		unlocked.append("phoenix")
+
+	# 预算狂人：总投入 < 80% 标准线（每轮总额×轮数），且点火
+	var spent: int = 0
+	for p in PARTS:
+		spent += int(cumulative_allocation.get(p, 0))
+	var standard: float = float(total_budget * TOTAL_ROUNDS)
+	if q_value >= 1.0 and standard > 0.0 and float(spent) < 0.8 * standard:
+		unlocked.append("budget_madman")
+
+	return unlocked
 
 
 ## 标记某根因已识别处置
@@ -146,6 +211,8 @@ func to_save_dict() -> Dictionary:
 		"budget_remaining": budget_remaining,
 		"cumulative_allocation": cumulative_allocation,
 		"identified_causes": identified_causes,
+		"last_round_bonus": last_round_bonus,
+		"min_stability": min_stability,
 		"run_log": run_log,
 	}
 
@@ -160,6 +227,11 @@ func from_save_dict(d: Dictionary) -> void:
 	fuel_ratio = float(d.get("fuel_ratio", 1.0))
 	budget_remaining = int(d.get("budget_remaining", total_budget))
 	cumulative_allocation = d.get("cumulative_allocation", {})
+	last_round_bonus = d.get("last_round_bonus", {})
+	for p in PARTS:
+		if not last_round_bonus.has(p):
+			last_round_bonus[p] = false
+	min_stability = float(d.get("min_stability", 1.0))
 	var causes: Array = d.get("identified_causes", [])
 	identified_causes.assign(causes)
 	run_log = d.get("run_log", [])

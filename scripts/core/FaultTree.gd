@@ -48,7 +48,17 @@ static func repair_ratio(cause_id: String, alloc: Variant = null) -> float:
 	return clampf(invest / threshold, 0.0, 1.0)
 
 
-## 仪表读数：base * (1 + 残余 deviation 之和)，残余 = deviation*(1-修复进度)
+## 某根因本轮的"超额投入减免"系数（0,1]：上一轮在其修复部位超额投入则 <1，否则 1。
+static func bonus_factor(cause_id: String) -> float:
+	var rc: Dictionary = DataManager.get_faults().get("root_causes", {}).get(cause_id, {})
+	var fix_part: String = rc.get("fix_part", "")
+	if fix_part == "" or not GameState.over_invest_bonus(fix_part):
+		return 1.0
+	var relief: float = float(DataManager.get_balance().get("over_invest", {}).get("bonus_relief", 0.05))
+	return clampf(1.0 - relief, 0.0, 1.0)
+
+
+## 仪表读数：base * (1 + 残余 deviation 之和)，残余 = deviation*(1-修复进度)*超额减免
 static func gauge_reading(round_index: int, gauge_id: String, base: float, alloc: Variant = null) -> float:
 	if round_index <= 0:
 		return base
@@ -57,7 +67,7 @@ static func gauge_reading(round_index: int, gauge_id: String, base: float, alloc
 		var sd: Dictionary = s
 		if sd.get("gauge", "") == gauge_id:
 			var repair: float = repair_ratio(sd.get("cause", ""), alloc)
-			dev_sum += float(sd.get("deviation", 0.0)) * (1.0 - repair)
+			dev_sum += float(sd.get("deviation", 0.0)) * (1.0 - repair) * bonus_factor(sd.get("cause", ""))
 	return base * (1.0 + dev_sum)
 
 
@@ -80,7 +90,7 @@ static func metric_offsets(round_index: int, alloc: Variant = null) -> Dictionar
 		var max_pen: float = float(imp.get("max_penalty", 0.1))
 		var repair: float = repair_ratio(cause, alloc)
 		var scale: float = absf(float(sd.get("deviation", 0.0))) / ref_dev
-		off[metric] = float(off[metric]) - max_pen * (1.0 - repair) * scale
+		off[metric] = float(off[metric]) - max_pen * (1.0 - repair) * scale * bonus_factor(cause)
 	return off
 
 

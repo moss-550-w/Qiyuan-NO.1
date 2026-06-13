@@ -1,8 +1,8 @@
 {
-  "_comment": "三种难度参数。gauge_noise=仪表读数随机噪声幅度(0~1)；highlight_suspect=简报可疑点高亮；show_hint_dash=拖放建议虚线；time_limit=每轮限时秒(0=不限时，会被rounds.json逐轮覆盖)；total_budget=每轮经费总量。",
+  "_comment": "三种难度参数。gauge_noise=仪表干扰：{amp 幅度0~1, freq 角频率}，采用确定性低频正弦(跨轮平滑、多轮可识别)，amp=0 即无干扰；兼容旧写法(直接写数值则退化为固定幅度)。highlight_suspect=简报可疑点高亮；show_hint_dash=拖放建议虚线；time_limit=每轮限时秒(0=不限时，会被rounds.json逐轮覆盖)；total_budget=每轮经费总量。",
   "novice": {
     "label": "新手 / 科普模式",
-    "gauge_noise": 0.0,
+    "gauge_noise": { "amp": 0.0, "freq": 0.0 },
     "highlight_suspect": true,
     "show_hint_dash": true,
     "time_limit": 0,
@@ -11,7 +11,7 @@
   },
   "chief": {
     "label": "总工模式",
-    "gauge_noise": 0.03,
+    "gauge_noise": { "amp": 0.03, "freq": 1.1 },
     "highlight_suspect": false,
     "show_hint_dash": false,
     "time_limit": 300,
@@ -20,7 +20,7 @@
   },
   "custom": {
     "label": "自定义模式",
-    "gauge_noise": 0.02,
+    "gauge_noise": { "amp": 0.02, "freq": 0.9 },
     "highlight_suspect": false,
     "show_hint_dash": false,
     "time_limit": 240,

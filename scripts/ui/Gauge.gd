@@ -13,6 +13,8 @@ var gauge_id: String = ""
 var _unit: String = ""
 var _normal_min: float = 0.0
 var _normal_max: float = 1.0
+var _base_label: String = ""        # 不含角标的原始标签名
+var _stable_confirmed: bool = false
 
 const COLOR_NORMAL := Color(0.30, 0.85, 0.40)   # 绿
 const COLOR_WARN := Color(0.95, 0.80, 0.25)     # 黄
@@ -25,7 +27,8 @@ func setup(id: String, cfg: Dictionary) -> void:
 	_unit = cfg.get("unit", "")
 	_normal_min = float(cfg.get("normal_min", 0.0))
 	_normal_max = float(cfg.get("normal_max", 1.0))
-	_label.text = cfg.get("label", id)
+	_base_label = cfg.get("label", id)
+	_label.text = _base_label
 	_bar.min_value = _normal_min - (_normal_max - _normal_min) * 0.5
 	_bar.max_value = _normal_max + (_normal_max - _normal_min) * 0.5
 	set_reading(float(cfg.get("base", _normal_min)))
@@ -47,3 +50,13 @@ func set_reading(value: float) -> void:
 	var sb := _bar.get_theme_stylebox("fill")
 	if sb is StyleBoxFlat:
 		(sb as StyleBoxFlat).bg_color = color
+
+
+## 设置"超额投入·稳定确认"角标（由上一轮超额投入触发）
+func set_stable_confirmed(on: bool) -> void:
+	_stable_confirmed = on
+	_label.text = _base_label + ("  ✓稳定" if on else "")
+	if on:
+		_label.add_theme_color_override("font_color", COLOR_NORMAL)
+	else:
+		_label.remove_theme_color_override("font_color")
