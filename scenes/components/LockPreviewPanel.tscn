@@ -1,0 +1,60 @@
+﻿[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/LockPreviewPanel.gd" id=1]
+
+[node name="LockPreviewPanel" type="Control"]
+layout_mode = 6
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource(1)
+
+[node name="Dimmer" type="ColorRect" parent="."]
+layout_mode = 6
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+
+[node name="Center" type="CenterContainer" parent="Dimmer"]
+layout_mode = 1
+expansion_rect_size_x = 500
+expansion_rect_size_y = 400
+
+[node name="Panel" type="Panel" parent="Dimmer/Center"]
+layout_mode = 6
+
+[node name="Margin" type="MarginContainer" parent="Dimmer/Center/Panel"]
+layout_mode = 6
+
+[node name="VBox" type="VBoxContainer" parent="Dimmer/Center/Panel/Margin"]
+layout_mode = 6
+separation = 10
+
+[node name="Title" type="Label" parent="Dimmer/Center/Panel/Margin/VBox"]
+layout_mode = 6
+text = "确认提交"
+h_size_flags = 3
+vertical_alignment = 1
+
+[node name="PredictText" type="RichTextLabel" parent="Dimmer/Center/Panel/Margin/VBox"]
+layout_mode = 6
+size_flags_horizontal = 3
+size_flags_vertical = 3
+fit_vertical_content = true
+
+[node name="Buttons" type="HBoxContainer" parent="Dimmer/Center/Panel/Margin/VBox"]
+layout_mode = 6
+alignment = 1
+
+[node name="BtnConfirm" type="Button" parent="Dimmer/Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 6
+text = "确认提交"
+
+[node name="BtnCancel" type="Button" parent="Dimmer/Center/Panel/Margin/VBox/Buttons"]
+layout_mode = 6
+text = "返回调整"

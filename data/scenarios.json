@@ -1,0 +1,190 @@
+{
+  "scenarios": [
+    {
+      "id": "default_alpha",
+      "name": "标准场景 Alpha",
+      "description": "磁体电源老化导致三轮连锁故障，氚循环与第一壁间无耦合。",
+      "root_causes": [
+        "magnet_psu_aging",
+        "wall_microcrack",
+        "tritium_pump_decay"
+      ],
+      "root_logic": {
+        "_comment": "三个根因独立存在，无主次之分。每轮随机选择1-2个症状出现。",
+        "round_distribution": "independent"
+      },
+      "expert_roles": {
+        "magnet_eng": {
+          "role": "primary"
+        },
+        "wall_eng": {
+          "role": "primary"
+        },
+        "tritium_eng": {
+          "role": "primary"
+        },
+        "plasma_eng": {
+          "role": "primary"
+        }
+      },
+      "gauge_offset": {
+        "_comment": "每轮各仪表基准偏移量（相对于 rounds.json 定义），用于制造额外噪声。",
+        "toroidal_field": 0.0,
+        "wall_temp": 0.0,
+        "tritium_ratio": 0.0,
+        "plasma_temp": 0.0
+      },
+      "chains": [],
+      "trigger_round": 0
+    },
+    {
+      "id": "coupled_beta",
+      "name": "耦合场景 Beta",
+      "description": "磁体电源老化为主因，第一壁微裂纹为次因，形成磁体约束弱化->第一壁热斑故障链。",
+      "root_causes": [
+        "magnet_psu_aging",
+        "wall_microcrack"
+      ],
+      "root_logic": {
+        "round_distribution": "chain",
+        "primary_cause": "magnet_psu_aging",
+        "secondary_cause": "wall_microcrack"
+      },
+      "expert_roles": {
+        "magnet_eng": {
+          "role": "primary"
+        },
+        "wall_eng": {
+          "role": "secondary"
+        },
+        "tritium_eng": {
+          "role": "observer"
+        },
+        "plasma_eng": {
+          "role": "observer"
+        }
+      },
+      "gauge_offset": {
+        "toroidal_field": -0.02,
+        "wall_temp": 0.03,
+        "tritium_ratio": 0.0,
+        "plasma_temp": -0.01
+      },
+      "chains": [
+        "magnet_first_wall_heat"
+      ],
+      "trigger_round": 3
+    },
+    {
+      "id": "tritium_gamma",
+      "name": "氚提取场景 Gamma",
+      "description": "氚提取泵效率下降引发连锁反应，影响等离子体温度和燃料自持率。",
+      "root_causes": [
+        "tritium_pump_decay",
+        "magnet_psu_aging"
+      ],
+      "root_logic": {
+        "round_distribution": "chain",
+        "primary_cause": "tritium_pump_decay",
+        "secondary_cause": "magnet_psu_aging"
+      },
+      "expert_roles": {
+        "tritium_eng": {
+          "role": "primary"
+        },
+        "magnet_eng": {
+          "role": "secondary"
+        },
+        "wall_eng": {
+          "role": "observer"
+        },
+        "plasma_eng": {
+          "role": "observer"
+        }
+      },
+      "gauge_offset": {
+        "toroidal_field": -0.01,
+        "wall_temp": 0.0,
+        "tritium_ratio": -0.04,
+        "plasma_temp": -0.02
+      },
+      "chains": [
+        "tritium_magnet_constraint"
+      ],
+      "trigger_round": 3
+    },
+    {
+      "id": "triple_delta",
+      "name": "三重危机 Delta",
+      "description": "三根因同时活跃，每轮都呈现复杂症状组合，考验综合诊断能力。",
+      "root_causes": [
+        "magnet_psu_aging",
+        "wall_microcrack",
+        "tritium_pump_decay"
+      ],
+      "root_logic": {
+        "round_distribution": "triple",
+        "severity_scale": "escalating"
+      },
+      "expert_roles": {
+        "magnet_eng": {
+          "role": "primary"
+        },
+        "wall_eng": {
+          "role": "primary"
+        },
+        "tritium_eng": {
+          "role": "primary"
+        },
+        "plasma_eng": {
+          "role": "primary"
+        }
+      },
+      "gauge_offset": {
+        "toroidal_field": -0.02,
+        "wall_temp": 0.03,
+        "tritium_ratio": -0.03,
+        "plasma_temp": -0.02
+      },
+      "chains": [
+        "magnet_first_wall_heat",
+        "tritium_magnet_constraint"
+      ],
+      "trigger_round": 2
+    },
+    {
+      "id": "quiet_epsilon",
+      "name": "隐蔽场景 Epsilon",
+      "description": "症状微弱且分散，需要多轮观察才能发现趋势异常，考验耐心。",
+      "root_causes": [
+        "tritium_pump_decay"
+      ],
+      "root_logic": {
+        "round_distribution": "gradual",
+        "early_rounds": 2
+      },
+      "expert_roles": {
+        "tritium_eng": {
+          "role": "primary"
+        },
+        "magnet_eng": {
+          "role": "observer"
+        },
+        "wall_eng": {
+          "role": "observer"
+        },
+        "plasma_eng": {
+          "role": "observer"
+        }
+      },
+      "gauge_offset": {
+        "toroidal_field": 0.0,
+        "wall_temp": 0.0,
+        "tritium_ratio": -0.01,
+        "plasma_temp": 0.0
+      },
+      "chains": [],
+      "trigger_round": 0
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "fault_chains": [
+    {
+      "id": "magnet_first_wall_heat",
+      "primary": "magnet_psu_aging",
+      "secondary": "wall_microcrack",
+      "primary_gauge": "toroidal_field",
+      "secondary_gauge": "wall_temp",
+      "primary_deviation_sign": -1,
+      "secondary_deviation_sign": 1,
+      "coupling": 0.6,
+      "trigger_round": 3,
+      "description": "磁体约束弱化 -> 第一壁热斑"
+    },
+    {
+      "id": "tritium_magnet_constraint",
+      "primary": "tritium_pump_decay",
+      "secondary": "magnet_psu_aging",
+      "primary_gauge": "tritium_ratio",
+      "secondary_gauge": "toroidal_field",
+      "primary_deviation_sign": -1,
+      "secondary_deviation_sign": -1,
+      "coupling": 0.5,
+      "trigger_round": 3,
+      "description": "氚提取失败 -> 磁体约束恶化"
+    }
+  ]
+}
