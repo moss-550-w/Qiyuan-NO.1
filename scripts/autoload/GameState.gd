@@ -83,9 +83,11 @@ func reset(diff: String = "novice") -> void:
 	run_log = []
 
 
-## 进入下一轮（先据上一轮投入结算超额奖励，再清空本轮分配、恢复经费）
-func start_round(index: int) -> void:
-	_settle_over_invest_bonus()
+## 进入下一轮（先据上一轮投入结算超额奖励，再清空本轮分配、恢复经费）。
+## settle_bonus=false 用于续档恢复：此时 round_allocation 已不可考，应保留存档中的 last_round_bonus。
+func start_round(index: int, settle_bonus: bool = true) -> void:
+	if settle_bonus:
+		_settle_over_invest_bonus()
 	current_round = index
 	budget_remaining = total_budget
 	round_delayed = false

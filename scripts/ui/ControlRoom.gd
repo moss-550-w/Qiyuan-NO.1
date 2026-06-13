@@ -93,7 +93,7 @@ func _ready() -> void:
 		GameState.reset(SaveManager.settings.get("difficulty", "novice"))
 		_start_round(1)
 	else:
-		_start_round(GameState.current_round)
+		_start_round(GameState.current_round, true)
 
 	# 仅总工/自定义模式（show_history_log）显示历史日志入口
 	_btn_log.visible = bool(
@@ -265,9 +265,10 @@ func _rebuild_pool() -> void:
 # 轮次流程
 # ---------------------------------------------------------------------------
 
-## 开始第 r 轮：重置经费分配、施加故障、设置限时/噪声/提示、刷新全部显示
-func _start_round(r: int) -> void:
-	GameState.start_round(r)
+## 开始第 r 轮：重置经费分配、施加故障、设置限时/噪声/提示、刷新全部显示。
+## is_resume=true 表示续档恢复，保留存档中的超额奖励（不据已清零的分配重新结算）。
+func _start_round(r: int, is_resume: bool = false) -> void:
+	GameState.start_round(r, not is_resume)
 	_btn_submit.disabled = false
 	_clear_popups()
 	_title.text = "启元一号 · 中控台　|　第 %d 轮 / %d" % [r, GameState.TOTAL_ROUNDS]
