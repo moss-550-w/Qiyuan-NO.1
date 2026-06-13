@@ -43,6 +43,15 @@ var round_delayed: bool = false
 ## 上一轮"超额投入奖励"结果：part_id → bool（仅作用于当前轮，不跨轮累积）
 var last_round_bonus: Dictionary = {}
 
+## 专家信任度：expert_id → 0..1（影响其简报情报精度与负责仪表抖动）
+var expert_trust: Dictionary = {}
+
+## 各轮结算后的最终稳定度序列（用于"连续下降"内生后果判定）
+var stability_history: Array = []
+
+## 各部位累计不可逆损伤等级：part_id → float（投入长期不足时累积，抬高后续故障强度）
+var irreversible_damage: Dictionary = {}
+
 ## 本局稳定度历史最低值（用于"烈火中永生"等成就判定）
 var min_stability: float = 1.0
 
@@ -73,11 +82,19 @@ func reset(diff: String = "novice") -> void:
 	round_allocation = {}
 	cumulative_allocation = {}
 	last_round_bonus = {}
+	irreversible_damage = {}
 	for p in PARTS:
 		round_allocation[p] = 0
 		cumulative_allocation[p] = 0
 		last_round_bonus[p] = false
+		irreversible_damage[p] = 0.0
 
+	expert_trust = {}
+	var trust_init: float = float(DataManager.get_balance().get("expert_trust", {}).get("initial", 0.6))
+	for eid in DataManager.get_experts():
+		expert_trust[eid] = trust_init
+
+	stability_history = []
 	identified_causes = []
 	last_session_achievements = []
 	run_log = []
@@ -108,6 +125,22 @@ func _settle_over_invest_bonus() -> void:
 ## 某部位本轮是否享有上一轮超额投入带来的故障减免
 func over_invest_bonus(part_id: String) -> bool:
 	return bool(last_round_bonus.get(part_id, false))
+
+
+## 读取某专家信任度（缺省回退配置 initial）
+func get_trust(expert_id: String) -> float:
+	var init: float = float(DataManager.get_balance().get("expert_trust", {}).get("initial", 0.6))
+	return float(expert_trust.get(expert_id, init))
+
+
+## 调整某专家信任度（clamp 0..1）
+func adjust_trust(expert_id: String, delta: float) -> void:
+	expert_trust[expert_id] = clampf(get_trust(expert_id) + delta, 0.0, 1.0)
+
+
+## 读取某部位不可逆损伤等级
+func get_damage(part_id: String) -> float:
+	return float(irreversible_damage.get(part_id, 0.0))
 
 
 ## 尝试向某部位投入 amount 单位经费，成功返回 true
@@ -215,6 +248,9 @@ func to_save_dict() -> Dictionary:
 		"identified_causes": identified_causes,
 		"last_round_bonus": last_round_bonus,
 		"min_stability": min_stability,
+		"expert_trust": expert_trust,
+		"stability_history": stability_history,
+		"irreversible_damage": irreversible_damage,
 		"run_log": run_log,
 	}
 
@@ -234,6 +270,16 @@ func from_save_dict(d: Dictionary) -> void:
 		if not last_round_bonus.has(p):
 			last_round_bonus[p] = false
 	min_stability = float(d.get("min_stability", 1.0))
+	expert_trust = d.get("expert_trust", {})
+	var trust_init: float = float(DataManager.get_balance().get("expert_trust", {}).get("initial", 0.6))
+	for eid in DataManager.get_experts():
+		if not expert_trust.has(eid):
+			expert_trust[eid] = trust_init
+	stability_history = d.get("stability_history", [])
+	irreversible_damage = d.get("irreversible_damage", {})
+	for p in PARTS:
+		if not irreversible_damage.has(p):
+			irreversible_damage[p] = 0.0
 	var causes: Array = d.get("identified_causes", [])
 	identified_causes.assign(causes)
 	run_log = d.get("run_log", [])

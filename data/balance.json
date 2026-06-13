@@ -38,6 +38,33 @@
     "min_indicated_deviation": 0.10,
     "heavy_elsewhere_ratio": 0.5
   },
+  "expert_trust": {
+    "_comment": "专家信任度→情报精度(非说谎)。initial=初始信任；trust≥precise_threshold 用 precise 简报(窄区间/确定语气)，否则用 vague(模糊)。采信正确警告(其部位有故障且玩家投入)+trust_gain；无视则-trust_loss。低信任(<jitter_trust_threshold)时其负责仪表叠加规律抖动 amp=jitter_amp*(1-trust)。",
+    "initial": 0.6,
+    "precise_threshold": 0.5,
+    "trust_gain": 0.15,
+    "trust_loss": 0.2,
+    "invest_heed_ratio": 0.1,
+    "jitter_trust_threshold": 0.5,
+    "jitter_amp": 0.02,
+    "jitter_freq": 1.3
+  },
+  "deep_diagnose": {
+    "_comment": "深度诊断：消耗 cost 经费，让某专家给出其负责部位近 lookback 轮的趋势与解读(不判定故障真假)。",
+    "cost": 10,
+    "lookback": 3
+  },
+  "fault_chain": {
+    "_comment": "故障链耦合：次因仪表偏移额外叠加 coupling×主因残余强度，使两表呈同步特征；修好主因则次因联动缓解。default_coupling 为链未指定 coupling 时的缺省。",
+    "default_coupling": 0.6
+  },
+  "irreversible_damage": {
+    "_comment": "不可逆损伤(内生后果)：某部位本轮有故障却投入<insufficient_ratio×总经费，累计 damage_step(上限 max_level)；该部位故障强度×(1+strength_per_level×damage)。",
+    "insufficient_ratio": 0.12,
+    "damage_step": 0.5,
+    "max_level": 2.0,
+    "strength_per_level": 0.15
+  },
   "fault_impact": {
     "_comment": "故障对指标的最大惩罚（满故障未修复时）。metric=作用指标；max_penalty=最大负偏移；实际惩罚=max_penalty*(1-修复进度)*(本轮deviation/reference_deviation)。",
     "reference_deviation": 0.10,

@@ -1,4 +1,5 @@
 {
+  "_comment": "四位子系统负责人。新模型(信任度→精度)：专家不说谎，但只对 direct_gauge(自身负责仪表)有精确数据，对他部位仅间接推断。bias_target=其负责部位；direct_gauge=其精确观测的仪表。personality/tone 影响话术风格。",
   "magnet_eng": {
     "name": "磁体工程师",
     "title": "环向场磁体系统负责人",
@@ -6,8 +7,7 @@
     "personality_label": "老派稳妥型",
     "avatar": "res://assets/art/avatars/magnet.png",
     "bias_target": "magnet_coil",
-    "hide_signal": ["magnet_psu_aging"],
-    "exaggerate_signal": [],
+    "direct_gauge": "toroidal_field",
     "tone": "沉稳、惜字、回避担责",
     "catchphrase": "磁体稳了，一切才稳。钱得先紧着线圈。"
   },
@@ -18,10 +18,9 @@
     "personality_label": "激进冒险型",
     "avatar": "res://assets/art/avatars/wall.png",
     "bias_target": "first_wall",
-    "hide_signal": ["wall_microcrack"],
-    "exaggerate_signal": [],
+    "direct_gauge": "wall_temp",
     "tone": "自信、夸张、爱推新材料",
-    "catchphrase": "新钨铜内衬扛得住，微裂纹？那都是噪声。"
+    "catchphrase": "新钨铜内衬扛得住，数据我看得最准。"
   },
   "tritium_eng": {
     "name": "氚循环工程师",
@@ -30,10 +29,9 @@
     "personality_label": "悲观预警型",
     "avatar": "res://assets/art/avatars/tritium.png",
     "bias_target": "breeder_blanket",
-    "hide_signal": [],
-    "exaggerate_signal": ["tritium_pump_decay"],
-    "tone": "焦虑、反复强调风险、夸大贫化",
-    "catchphrase": "氚又不够了！再不投包层我们要断料！"
+    "direct_gauge": "tritium_ratio",
+    "tone": "焦虑、反复强调风险",
+    "catchphrase": "氚的事我盯得最紧，包层一刻松不得。"
   },
   "plasma_eng": {
     "name": "等离子体物理师",
@@ -42,9 +40,8 @@
     "personality_label": "理想主义型",
     "avatar": "res://assets/art/avatars/plasma.png",
     "bias_target": "plasma_control",
-    "hide_signal": [],
-    "exaggerate_signal": [],
-    "tone": "理论先行、轻视硬件、推崇算法",
-    "catchphrase": "与其砸钱堆材料，不如优化控制算法。"
+    "direct_gauge": "plasma_temp",
+    "tone": "理论先行、推崇算法",
+    "catchphrase": "约束的细节我最清楚，算法能解决很多问题。"
   }
 }

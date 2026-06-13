@@ -1,12 +1,15 @@
 extends RefCounted
 class_name BriefingSystem
-## BriefingSystem —— 专家简报生成与立场过滤（纯函数式）
+## BriefingSystem —— 专家简报生成与信任度博弈（纯函数式）
 ##
-## 据 experts.json + briefings.json + 当前难度，为某轮生成四份带立场的简报。
-## 动态判定：
-##   - 隐瞒(is_hiding)：专家 hide_signal 中的根因正是本轮激活故障 → 他在淡化真问题。
-##   - 夸大(is_exaggerating)：专家 exaggerate_signal 中的根因本轮并未激活 → 虚张声势。
-## 新手模式高亮可疑卡片，并把 spin 中 {{suspect}} 片段染红；总工模式仅去标记。
+## 新模型(信任度→情报精度，专家不说谎)：
+##   - 信任度 ≥ precise_threshold → 采用 precise 简报（窄区间/确定语气），便于与仪表交叉核对；
+##     否则采用 vague 简报（模糊/含糊），需玩家多方拼合判断。
+##   - 两版均为真实情况的不同粒度表述，不存在隐瞒/夸大。
+##   - 信任度变化：玩家在某专家负责部位"对症投入"(该部位本轮确有故障且投入达比例) → 信任 +；
+##     该部位有故障却被无视 → 信任 −。低信任仅降低信息质量，不会令专家主动造假。
+##
+## 专家信息差：每位专家只精确掌握 direct_gauge，对他部位仅间接推断（体现在文案中）。
 
 ## 专家展示顺序
 const EXPERT_ORDER := ["magnet_eng", "wall_eng", "tritium_eng", "plasma_eng"]
@@ -21,19 +24,14 @@ static func generate(round_index: int) -> Array:
 	if briefings is Dictionary:
 		round_briefs = (briefings as Dictionary).get(str(round_index), {})
 
-	var active: Array = FaultTree.round_active_causes(round_index)
-	var diff: Dictionary = DataManager.get_difficulty(GameState.difficulty)
-	var highlight_mode: bool = bool(diff.get("highlight_suspect", false))
+	var threshold: float = float(DataManager.get_balance().get("expert_trust", {}).get("precise_threshold", 0.5))
 
 	for eid in EXPERT_ORDER:
 		var ex: Dictionary = experts.get(eid, {})
 		var brief: Dictionary = round_briefs.get(eid, {})
-		var spin: String = brief.get("spin", brief.get("honest", ""))
-		var suspect_point: String = brief.get("suspect_point", "")
-
-		var is_hiding: bool = _intersects(ex.get("hide_signal", []), active)
-		var is_exaggerating: bool = _check_exaggeration(ex.get("exaggerate_signal", []), active)
-		var has_issue: bool = (is_hiding or is_exaggerating) and suspect_point != ""
+		var trust: float = GameState.get_trust(eid)
+		var precise: bool = trust >= threshold
+		var text: String = brief.get("precise" if precise else "vague", brief.get("precise", ""))
 
 		result.append({
 			"expert_id": eid,
@@ -42,35 +40,43 @@ static func generate(round_index: int) -> Array:
 			"personality": ex.get("personality", ""),
 			"personality_label": ex.get("personality_label", ""),
 			"avatar": ex.get("avatar", ""),
-			"text": _render(spin, highlight_mode),
-			"is_hiding": is_hiding,
-			"is_exaggerating": is_exaggerating,
-			"suspect_point": suspect_point,
-			"highlight": highlight_mode and has_issue,
+			"direct_gauge": ex.get("direct_gauge", ""),
+			"text": text,
+			"trust": trust,
+			"precise": precise,
+			"confidence_label": "数据较确切" if precise else "数据模糊",
 		})
 	return result
 
 
-## 渲染 spin 文本：处理 {{suspect}} 标记
-static func _render(spin: String, highlight: bool) -> String:
-	if highlight:
-		return spin.replace("{{suspect}}", "[color=#ff6b6b]").replace("{{/suspect}}", "[/color]")
-	return spin.replace("{{suspect}}", "").replace("{{/suspect}}", "")
+## 据本轮"对症投入"情况更新各专家信任度（有副作用，玩家提交本轮时调用）。
+## 对每位专家：若其负责部位本轮确有故障，玩家达比例投入→信任+，被无视→信任−；
+## 无故障则不变。plasma_control 无对应根因，信任保持。
+static func update_trust(round_index: int) -> void:
+	var experts: Dictionary = DataManager.get_experts()
+	var tcfg: Dictionary = DataManager.get_balance().get("expert_trust", {})
+	var gain: float = float(tcfg.get("trust_gain", 0.15))
+	var loss: float = float(tcfg.get("trust_loss", 0.2))
+	var heed_ratio: float = float(tcfg.get("invest_heed_ratio", 0.1))
+	var heed_amount: float = heed_ratio * float(GameState.total_budget)
 
+	var active: Array = FaultTree.round_active_causes(round_index)
+	var causes: Dictionary = DataManager.get_faults().get("root_causes", {})
 
-## signals 与本轮激活故障是否有交集
-static func _intersects(signals: Array, active: Array) -> bool:
-	for s in signals:
-		if active.has(s):
-			return true
-	return false
-
-
-## 夸大：声称的信号本轮并未激活（喊狼来了）
-static func _check_exaggeration(exaggerate_signals: Array, active: Array) -> bool:
-	if exaggerate_signals.is_empty():
-		return false
-	for s in exaggerate_signals:
-		if not active.has(s):
-			return true
-	return false
+	for eid in experts:
+		var part: String = (experts[eid] as Dictionary).get("bias_target", "")
+		if part == "":
+			continue
+		# 该专家负责部位本轮是否确有故障
+		var part_faulty: bool = false
+		for c in active:
+			if (causes.get(c, {}) as Dictionary).get("fix_part", "") == part:
+				part_faulty = true
+				break
+		if not part_faulty:
+			continue
+		var invested: float = float(GameState.round_allocation.get(part, 0))
+		if invested >= heed_amount:
+			GameState.adjust_trust(eid, gain)
+		else:
+			GameState.adjust_trust(eid, -loss)

@@ -58,6 +58,35 @@ static func bonus_factor(cause_id: String) -> float:
 	return clampf(1.0 - relief, 0.0, 1.0)
 
 
+## 某根因因"不可逆损伤"被放大的强度系数（≥1）：其修复部位损伤越深，故障越强。
+static func damage_factor(cause_id: String) -> float:
+	var rc: Dictionary = DataManager.get_faults().get("root_causes", {}).get(cause_id, {})
+	var fix_part: String = rc.get("fix_part", "")
+	if fix_part == "":
+		return 1.0
+	var dmg: float = GameState.get_damage(fix_part)
+	if dmg <= 0.0:
+		return 1.0
+	var per: float = float(DataManager.get_balance().get("irreversible_damage", {}).get("strength_per_level", 0.15))
+	return 1.0 + per * dmg
+
+
+## 综合强度系数 = 超额减免 × 不可逆损伤放大
+static func strength_factor(cause_id: String) -> float:
+	return bonus_factor(cause_id) * damage_factor(cause_id)
+
+
+## 本轮已激活的故障链（round ≥ trigger_round 且主因本轮在场）
+static func active_chains(round_index: int) -> Array:
+	var result: Array = []
+	var active: Array = round_active_causes(round_index)
+	for ch in DataManager.get_faults().get("fault_chains", []):
+		var cd: Dictionary = ch
+		if round_index >= int(cd.get("trigger_round", 99)) and active.has(cd.get("primary", "")):
+			result.append(cd)
+	return result
+
+
 ## 仪表读数：base * (1 + 残余 deviation 之和)，残余 = deviation*(1-修复进度)*超额减免
 static func gauge_reading(round_index: int, gauge_id: String, base: float, alloc: Variant = null) -> float:
 	if round_index <= 0:
