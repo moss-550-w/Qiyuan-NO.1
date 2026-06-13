@@ -9,7 +9,7 @@ extends Control
 const GAUGE_SCENE := preload("res://scenes/components/Gauge.tscn")
 const SETTINGS_SCENE := preload("res://scenes/panels/SettingsPanel.tscn")
 const CONTROL_ROOM := "res://scenes/control_room/ControlRoom.tscn"
-const DIFFICULTY_CYCLE := ["novice", "chief", "custom"]
+const DIFFICULTY_CYCLE := ["novice", "chief", "custom", "challenge"]
 
 @onready var _status: RichTextLabel = $Center/Panel/Margin/VBox/StatusLabel
 @onready var _gauge_row: HBoxContainer = $Center/Panel/Margin/VBox/GaugeRow

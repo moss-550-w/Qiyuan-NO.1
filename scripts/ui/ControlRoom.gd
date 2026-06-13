@@ -362,7 +362,7 @@ func _apply_hints(r: int) -> void:
 				z.set_hint(true)
 
 
-## 生成并显示本轮四份专家简报
+## 生成并显示本轮四份专家简报，连接深度诊断信号
 func _build_briefings(r: int) -> void:
 	for c in _briefing_row.get_children():
 		c.queue_free()
@@ -371,6 +371,78 @@ func _build_briefings(r: int) -> void:
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_briefing_row.add_child(card)
 		card.setup(b)
+		card.deep_diagnose_requested.connect(_on_deep_diagnose)
+
+
+## 深度诊断（T2.2）：消耗经费，弹出该专家负责仪表近3轮趋势 + 专家解读。
+## 不告知玩家故障真假，只给趋势原始数据和语气解读。
+func _on_deep_diagnose(expert_id: String) -> void:
+	var cost: int = int(DataManager.get_balance().get("deep_diagnose", {}).get("cost", 10))
+	if GameState.budget_remaining < cost:
+		return
+	GameState.budget_remaining -= cost
+	GameState.budget_changed.emit(GameState.budget_remaining, GameState.round_allocation)
+	_rebuild_pool()
+
+	var ex: Dictionary = DataManager.get_experts().get(expert_id, {})
+	var dg: String = ex.get("direct_gauge", "")
+	var expert_name: String = ex.get("name", expert_id)
+	var lookback: int = int(DataManager.get_balance().get("deep_diagnose", {}).get("lookback", 3))
+
+	# 收集历史读数
+	var hist: Array = []
+	for entry in GameState.run_log:
+		var gs: Dictionary = (entry as Dictionary).get("gauges", {})
+		if gs.has(dg):
+			hist.append({"round": int((entry as Dictionary).get("round", 0)), "value": float(gs[dg])})
+	hist = hist.slice(maxi(0, hist.size() - lookback))
+
+	# 生成解读文本（据趋势方向，不判定根因）
+	var trend_text: String = _build_trend_interpretation(expert_id, dg, hist)
+	var gauge_label: String = dg
+	var rounds_cfg: Variant = DataManager.get_config("rounds")
+	if rounds_cfg is Dictionary:
+		gauge_label = ((rounds_cfg as Dictionary).get("gauges", {}) as Dictionary).get(dg, {}).get("label", dg)
+
+	var lines: String = "[b]深度诊断：%s · %s[/b]　[color=#8893a5](已扣 ¥%d)[/color]\n" % [expert_name, gauge_label, cost]
+	for h in hist:
+		lines += "  第 %d 轮：%.2f\n" % [(h as Dictionary)["round"], float((h as Dictionary)["value"])]
+	lines += "[color=#f5c63f]%s 说：%s[/color]" % [expert_name, trend_text]
+
+	var tag: PopupTag = POPUP_SCENE.instantiate()
+	add_child(tag)
+	tag.setup("深度诊断", lines)
+	tag.position = Vector2(660.0, 120.0)
+	_popups["deep_" + expert_id] = tag
+
+
+## 据趋势方向生成专家口吻解读（不判定真假）
+func _build_trend_interpretation(expert_id: String, _dg: String, hist: Array) -> String:
+	var ex: Dictionary = DataManager.get_experts().get(expert_id, {})
+	var personality: String = ex.get("personality", "")
+	if hist.size() < 2:
+		return "历史数据不足，暂无趋势判断。"
+	var first: float = float((hist[0] as Dictionary)["value"])
+	var last: float = float((hist[-1] as Dictionary)["value"])
+	var rising: bool = last > first * 1.02
+	var falling: bool = last < first * 0.98
+	match personality:
+		"conservative":
+			if falling:  return "数值在走低，不容忽视，建议保守处置。"
+			elif rising: return "数值偏高，有些担心，先观察看看。"
+			else:        return "趋势基本稳定，暂无异常迹象。"
+		"aggressive":
+			if rising:  return "确实往上走，但在我预期范围内，不必过虑。"
+			elif falling: return "偏低，我觉得系统还能承受，先不急。"
+			else:        return "数据很稳，我这边没问题。"
+		"pessimistic":
+			if falling: return "一直在掉！这个趋势让我很担心，必须处置。"
+			elif rising: return "往上走……说不准是不是坏事，先做好最坏打算。"
+			else:        return "勉强稳着，但随时可能变，不敢大意。"
+		_:  # idealistic
+			if rising:  return "参数升高，约束算法需要关注，值得投入优化。"
+			elif falling: return "下降趋势，理论上算法可以补偿，但幅度要控制。"
+			else:        return "总体平稳，控制系统运行良好。"
 
 
 ## 玩家点"提交本轮"：先做逻辑一致性提示（仅提醒不评判），确认后再真正提交。
@@ -471,10 +543,10 @@ func _accumulate_damage(r: int) -> void:
 				clampf(float(GameState.irreversible_damage.get(part, 0.0)) + step, 0.0, max_lvl)
 
 
-## 稳定度历史连续下降判定（当前轮 + 前一轮均低于各自前值）
+## 稳定度历史连续两轮下降判定（需要至少3个历史值）
 func _check_stability_degradation() -> bool:
 	var h: Array = GameState.stability_history
-	return h.size() >= 2 and float(h[-1]) < float(h[-2])
+	return h.size() >= 3 and float(h[-1]) < float(h[-2]) and float(h[-2]) < float(h[-3])
 
 
 ## 末轮结束：判定结局矩阵，解锁成就，切换到结局面板
@@ -622,11 +694,8 @@ func _refresh_gauges() -> void:
 			reading *= (1.0 + float(_round_noise.get(id, 0.0)))
 			reading *= (1.0 + float(trust_jitter.get(id, 0.0)))
 			gauge.set_reading(reading)
-		# 故障链同步标记：次因仪表显示"⇌链"角标（复用 set_stable_confirmed 的着色接口）
-		# 链路标记与稳定确认互斥，链优先
-		if chain_gauges.has(id):
-			gauge.set_chain_linked(true)
-		# 否则已由 _apply_stable_confirm 在本轮开始时设置（链激活前本轮开始即清除）
+		# 故障链同步标记：每帧重算（修复主因后可立即清除"⇌链路"角标）
+		gauge.set_chain_linked(chain_gauges.has(id))
 
 
 func _refresh_zone(part_id: String) -> void:

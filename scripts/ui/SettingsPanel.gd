@@ -22,7 +22,7 @@ const PARTICLE_OPTIONS := [
 	{"id": "low", "label": "低（网页/低端）"},
 	{"id": "off", "label": "关闭"},
 ]
-const DIFFICULTY_OPTIONS := ["novice", "chief", "custom"]
+const DIFFICULTY_OPTIONS := ["novice", "chief", "custom", "challenge"]
 
 
 func _ready() -> void:

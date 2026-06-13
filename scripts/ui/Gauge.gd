@@ -55,8 +55,22 @@ func set_reading(value: float) -> void:
 ## 设置"超额投入·稳定确认"角标（由上一轮超额投入触发）
 func set_stable_confirmed(on: bool) -> void:
 	_stable_confirmed = on
-	_label.text = _base_label + ("  ✓稳定" if on else "")
+	if not _chain_linked:
+		_label.text = _base_label + ("  ✓稳定" if on else "")
+		if on:
+			_label.add_theme_color_override("font_color", COLOR_NORMAL)
+		else:
+			_label.remove_theme_color_override("font_color")
+
+
+## 设置"故障链同步"角标（第3轮后激活的耦合链次因仪表）
+var _chain_linked: bool = false
+func set_chain_linked(on: bool) -> void:
+	_chain_linked = on
+	_label.text = _base_label + ("  ⇌链路" if on else ("  ✓稳定" if _stable_confirmed else ""))
 	if on:
+		_label.add_theme_color_override("font_color", Color(0.95, 0.75, 0.25))
+	elif _stable_confirmed:
 		_label.add_theme_color_override("font_color", COLOR_NORMAL)
 	else:
 		_label.remove_theme_color_override("font_color")

@@ -87,12 +87,12 @@ func _load_json(path: String) -> Variant:
 
 ## 字段校验：仅做关键结构性检查，业务细节由各模块自行兜底
 func _validate() -> void:
-	# experts：必须含四位专家，每位含 name/personality
+	# experts：必须含四位专家，每位含 name/personality/direct_gauge（信任度模型）
 	_require_keys("experts", ["magnet_eng", "wall_eng", "tritium_eng", "plasma_eng"])
 	if _store.has("experts"):
 		for id in _store["experts"]:
 			var e: Variant = _store["experts"][id]
-			_require_fields("experts.%s" % id, e, ["name", "personality"])
+			_require_fields("experts.%s" % id, e, ["name", "personality", "direct_gauge"])
 
 	# faults：必须含 root_causes 与 rounds
 	_require_fields("faults", _store.get("faults"), ["root_causes", "rounds"])
