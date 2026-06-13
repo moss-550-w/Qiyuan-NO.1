@@ -87,7 +87,31 @@ static func active_chains(round_index: int) -> Array:
 	return result
 
 
-## 仪表读数：base * (1 + 残余 deviation 之和)，残余 = deviation*(1-修复进度)*超额减免
+## 故障链对某仪表的额外耦合偏移（次因联动）
+static func chain_gauge_extra(round_index: int, gauge_id: String, alloc: Variant = null) -> float:
+	var extra: float = 0.0
+	var def_coupling: float = float(DataManager.get_balance().get("fault_chain", {}).get("default_coupling", 0.6))
+	for ch in active_chains(round_index):
+		var cd: Dictionary = ch
+		if cd.get("secondary_gauge", "") != gauge_id:
+			continue
+		# 次因联动强度 = 主因残余强度 × coupling
+		var primary: String = cd.get("primary", "")
+		var coupling: float = float(cd.get("coupling", def_coupling))
+		# 主因在本轮表象中的残余deviation之和（无需关联修复阈值，只看其真实残余）
+		var primary_residual: float = 0.0
+		for s in round_symptoms(round_index):
+			var sd: Dictionary = s
+			if sd.get("cause", "") == primary:
+				var rep: float = repair_ratio(primary, alloc)
+				primary_residual += absf(float(sd.get("deviation", 0.0))) * (1.0 - rep)
+		# 次因偏移方向由链定义
+		var direction: float = sign(float(cd.get("secondary_deviation_sign", 1.0)))
+		extra += direction * primary_residual * coupling
+	return extra
+
+
+## 仪表读数：base * (1 + 残余 deviation + 链耦合偏移)，含综合强度系数（减免×损伤）
 static func gauge_reading(round_index: int, gauge_id: String, base: float, alloc: Variant = null) -> float:
 	if round_index <= 0:
 		return base
@@ -95,8 +119,10 @@ static func gauge_reading(round_index: int, gauge_id: String, base: float, alloc
 	for s in round_symptoms(round_index):
 		var sd: Dictionary = s
 		if sd.get("gauge", "") == gauge_id:
-			var repair: float = repair_ratio(sd.get("cause", ""), alloc)
-			dev_sum += float(sd.get("deviation", 0.0)) * (1.0 - repair) * bonus_factor(sd.get("cause", ""))
+			var cause: String = sd.get("cause", "")
+			var repair: float = repair_ratio(cause, alloc)
+			dev_sum += float(sd.get("deviation", 0.0)) * (1.0 - repair) * strength_factor(cause)
+	dev_sum += chain_gauge_extra(round_index, gauge_id, alloc)
 	return base * (1.0 + dev_sum)
 
 
@@ -119,7 +145,7 @@ static func metric_offsets(round_index: int, alloc: Variant = null) -> Dictionar
 		var max_pen: float = float(imp.get("max_penalty", 0.1))
 		var repair: float = repair_ratio(cause, alloc)
 		var scale: float = absf(float(sd.get("deviation", 0.0))) / ref_dev
-		off[metric] = float(off[metric]) - max_pen * (1.0 - repair) * scale * bonus_factor(cause)
+		off[metric] = float(off[metric]) - max_pen * (1.0 - repair) * scale * strength_factor(cause)
 	return off
 
 

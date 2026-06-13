@@ -421,10 +421,17 @@ func _prompt_consistency(r: int) -> void:
 	dlg.popup_centered()
 
 
-## 提交本轮：识别判定 → 记录 → 推进 / 结束
+## 提交本轮：识别判定 → 信任度更新 → 不可逆损伤累积 → 稳定度历史 → 记录 → 推进/结束
 func _do_submit() -> void:
 	var r: int = GameState.current_round
 	var newly: Array = FaultTree.evaluate_round(r)
+	# 信任度博弈：据本轮对症投入情况更新各专家信任度
+	BriefingSystem.update_trust(r)
+	# 不可逆损伤：故障部位投入严重不足时累积
+	_accumulate_damage(r)
+	# 稳定度历史：记录本轮最终值，检查连续下降
+	GameState.stability_history.append(float(_actual["stability"]))
+	var degraded: bool = _check_stability_degradation()
 	GameState.add_log({
 		"round": r,
 		"q": _actual["q"],
@@ -436,12 +443,38 @@ func _do_submit() -> void:
 	AudioManager.play("ui_click")
 
 	var feedback: String = _identify_feedback(newly)
+	if degraded:
+		feedback += "　[color=#e09040]⚠ 约束稳定度连续下降——内生风险累积中。[/color]"
+
 	if GameState.is_final_round():
 		_finish(feedback)
 	else:
 		AudioManager.play("round_start")
 		_start_round(r + 1)
 		_info.text += "　" + feedback
+
+
+## 各故障部位投入严重不足时累积不可逆损伤（内生后果，仅标准模式也生效）
+func _accumulate_damage(r: int) -> void:
+	var dcfg: Dictionary = DataManager.get_balance().get("irreversible_damage", {})
+	var insuf_ratio: float = float(dcfg.get("insufficient_ratio", 0.12))
+	var step: float = float(dcfg.get("damage_step", 0.5))
+	var max_lvl: float = float(dcfg.get("max_level", 2.0))
+	var threshold: float = insuf_ratio * float(GameState.total_budget)
+	var causes: Dictionary = DataManager.get_faults().get("root_causes", {})
+	for c in FaultTree.round_active_causes(r):
+		var part: String = (causes.get(c, {}) as Dictionary).get("fix_part", "")
+		if part == "":
+			continue
+		if float(GameState.round_allocation.get(part, 0)) < threshold:
+			GameState.irreversible_damage[part] = \
+				clampf(float(GameState.irreversible_damage.get(part, 0.0)) + step, 0.0, max_lvl)
+
+
+## 稳定度历史连续下降判定（当前轮 + 前一轮均低于各自前值）
+func _check_stability_degradation() -> bool:
+	var h: Array = GameState.stability_history
+	return h.size() >= 2 and float(h[-1]) < float(h[-2])
 
 
 ## 末轮结束：判定结局矩阵，解锁成就，切换到结局面板
@@ -554,9 +587,30 @@ func _settle() -> void:
 		_set_alarm(disrupting)
 
 
-## 刷新全部仪表：物理仪表按故障残余偏移，Q值/稳定度按结算指标
+## 刷新全部仪表：物理仪表按故障残余偏移，Q值/稳定度按结算指标。
+## 额外叠加：① 总工/挑战模式确定性周期噪声（_round_noise），② 低信任专家的直接仪表抖动，③ 故障链同步标记。
 func _refresh_gauges() -> void:
 	var r: int = GameState.current_round
+	# 故障链激活的次因仪表集合（用于显示"链路同步"角标）
+	var chain_gauges: Dictionary = {}
+	for ch in FaultTree.active_chains(r):
+		var sg: String = (ch as Dictionary).get("secondary_gauge", "")
+		if sg != "":
+			chain_gauges[sg] = true
+	# 低信任专家→其 direct_gauge 叠加额外抖动
+	var trust_jitter: Dictionary = {}
+	var tcfg: Dictionary = DataManager.get_balance().get("expert_trust", {})
+	var jitter_thr: float = float(tcfg.get("jitter_trust_threshold", 0.5))
+	var jitter_amp: float = float(tcfg.get("jitter_amp", 0.02))
+	var jitter_freq: float = float(tcfg.get("jitter_freq", 1.3))
+	for eid in DataManager.get_experts():
+		var trust: float = GameState.get_trust(eid)
+		if trust < jitter_thr:
+			var dg: String = (DataManager.get_experts()[eid] as Dictionary).get("direct_gauge", "")
+			if dg != "":
+				var amplitude: float = jitter_amp * (1.0 - trust)
+				trust_jitter[dg] = float(trust_jitter.get(dg, 0.0)) + amplitude * sin(float(r) * jitter_freq + float(eid.hash()) * 0.7)
+
 	for id in _gauges:
 		var gauge := _gauges[id] as Gauge
 		if id == "q_value":
@@ -565,9 +619,14 @@ func _refresh_gauges() -> void:
 			gauge.set_reading(float(_actual["stability"]) * 100.0)
 		else:
 			var reading: float = FaultTree.gauge_reading(r, id, float(_gauge_base.get(id, 0.0)))
-			# 总工模式叠加本轮固定噪声
 			reading *= (1.0 + float(_round_noise.get(id, 0.0)))
+			reading *= (1.0 + float(trust_jitter.get(id, 0.0)))
 			gauge.set_reading(reading)
+		# 故障链同步标记：次因仪表显示"⇌链"角标（复用 set_stable_confirmed 的着色接口）
+		# 链路标记与稳定确认互斥，链优先
+		if chain_gauges.has(id):
+			gauge.set_chain_linked(true)
+		# 否则已由 _apply_stable_confirm 在本轮开始时设置（链激活前本轮开始即清除）
 
 
 func _refresh_zone(part_id: String) -> void:

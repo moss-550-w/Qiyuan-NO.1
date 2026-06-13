@@ -1,5 +1,5 @@
 {
-  "_comment": "故障树：三个根本原因 → 四轮递进表象。symptom.gauge 指仪表id，deviation 为相对正常值的偏移（负=偏低）。fix_part 指有效修复部位。",
+  "_comment": "故障树：三个根本原因 → 四轮递进表象。symptom.gauge 指仪表id，deviation 为相对正常值的偏移（负=偏低）。fix_part 指有效修复部位。fault_chains 在第3轮后激活，主因→次因形成可读耦合特征。",
   "root_causes": {
     "magnet_psu_aging": {
       "name": "磁体电源老化",
@@ -23,6 +23,17 @@
       "linked_expert": "tritium_eng"
     }
   },
+  "fault_chains": [
+    {
+      "_comment": "磁体约束弱化→第一壁热斑：环向场波动幅度超限 且 壁温出现同步周期性尖峰。识别线索：两表异常轮次同步；磁体专家提'约束略不稳'，壁专家抱怨'局部热负荷异常'，但均不主动关联。处理优先级：先修磁体(消根源)还是先降壁温(争时间)由玩家判断。",
+      "id": "magnet_to_wall_hotspot",
+      "primary": "magnet_psu_aging",
+      "secondary_gauge": "wall_temp",
+      "secondary_deviation_sign": 1,
+      "coupling": 0.5,
+      "trigger_round": 3
+    }
+  ],
   "rounds": [
     {
       "round": 1,

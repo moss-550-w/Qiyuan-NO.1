@@ -26,5 +26,16 @@
     "time_limit": 240,
     "total_budget": 100,
     "show_history_log": true
+  },
+  "challenge": {
+    "_comment": "挑战模式：破裂倒计时压力、经费偏紧、最高噪声。压力来自外部计时+内生后果叠加。单独计分（不污染标准剧情成就）。",
+    "label": "挑战模式",
+    "gauge_noise": { "amp": 0.04, "freq": 1.5 },
+    "highlight_suspect": false,
+    "show_hint_dash": false,
+    "time_limit": 180,
+    "total_budget": 80,
+    "show_history_log": true,
+    "challenge_scoring": true
   }
 }
