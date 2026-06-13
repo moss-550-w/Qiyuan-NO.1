@@ -56,6 +56,9 @@ func _on_dimmer_input(event: InputEvent) -> void:
 
 
 func _render() -> void:
+	if _chart:
+		_chart.set_series(_build_series())
+
 	var text: String = "[b]历史运行日志[/b]　[color=#8893a5]（各轮提交时的读数快照，关注异常走势）[/color]\n\n"
 	if GameState.run_log.is_empty():
 		_content.text = text + "[color=#8893a5]暂无已完成轮次。提交本轮后将在此记录。[/color]"
@@ -92,3 +95,26 @@ func _render() -> void:
 		text += "\n\n"
 
 	_content.text = text
+
+
+## 从 run_log 提取各关注仪表的跨轮序列，供 TrendChart 绘制
+func _build_series() -> Array:
+	var series: Array = []
+	for g in TRACK_GAUGES:
+		var pts: Array = []
+		var rounds: Array = []
+		for entry in GameState.run_log:
+			var gauges: Dictionary = (entry as Dictionary).get("gauges", {})
+			if gauges.has(g["id"]):
+				pts.append(float(gauges[g["id"]]))
+				rounds.append(int((entry as Dictionary).get("round", 0)))
+		if not pts.is_empty():
+			series.append({
+				"name": g["label"],
+				"color": g["color"],
+				"points": pts,
+				"rounds": rounds,
+				"unit": g["unit"],
+				"fmt": g["fmt"],
+			})
+	return series
