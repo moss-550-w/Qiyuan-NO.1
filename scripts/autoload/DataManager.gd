@@ -91,6 +91,8 @@ func _validate() -> void:
 	_require_keys("experts", ["magnet_eng", "wall_eng", "tritium_eng", "plasma_eng"])
 	if _store.has("experts"):
 		for id in _store["experts"]:
+			if (id as String).begins_with("_"):
+				continue
 			var e: Variant = _store["experts"][id]
 			_require_fields("experts.%s" % id, e, ["name", "personality", "direct_gauge"])
 
