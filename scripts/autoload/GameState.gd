@@ -61,6 +61,11 @@ var last_session_achievements: Array = []
 ## 历史运行日志（总工模式查阅）：每条 {round, gauge, value, note}
 var run_log: Array = []
 
+## 当前剧本 id（随机抽取）
+var current_scenario: String = "default_alpha"
+## 剧本配置缓存
+var scenario_data: Dictionary = {}
+
 
 func _ready() -> void:
 	reset()
@@ -93,6 +98,9 @@ func reset(diff: String = "novice") -> void:
 	var trust_init: float = float(DataManager.get_balance().get("expert_trust", {}).get("initial", 0.6))
 	for eid in DataManager.get_experts():
 		expert_trust[eid] = trust_init
+	# 剧本初始化
+	_select_scenario()
+
 
 	stability_history = []
 	identified_causes = []
@@ -235,6 +243,44 @@ func is_final_round() -> bool:
 	return current_round >= TOTAL_ROUNDS
 
 
+
+## 随机抽取剧本
+func _select_scenario() -> void:
+	var configs: Variant = DataManager.get_config("scenarios")
+	if not (configs is Dictionary):
+		current_scenario = "default_alpha"
+		scenario_data = {}
+		return
+	var list: Array = (configs as Dictionary).get("scenarios", [])
+	if list.is_empty():
+		current_scenario = "default_alpha"
+		scenario_data = {}
+		return
+	var idx: int = randi() % list.size()
+	var chosen: Dictionary = list[idx] as Dictionary
+	current_scenario = chosen.get("id", "default_alpha")
+	scenario_data = chosen.duplicate(true)
+	print("[GameState] 抽取剧本: ", current_scenario)
+
+## 获取当前剧本的 root_causes 列表
+func get_scenario_root_causes() -> Array:
+	return scenario_data.get("root_causes", ["magnet_psu_aging", "wall_microcrack", "tritium_pump_decay"])
+
+## 获取当前剧本的 gauge_offset
+func get_scenario_gauge_offset() -> Dictionary:
+	return scenario_data.get("gauge_offset", {})
+
+## 获取当前剧本的 expert_roles
+func get_scenario_expert_roles() -> Dictionary:
+	return scenario_data.get("expert_roles", {})
+
+## 获取当前剧本的 chains 列表
+func get_scenario_chains() -> Array:
+	return scenario_data.get("chains", [])
+
+## 获取当前剧本名称
+func get_scenario_name() -> String:
+	return scenario_data.get("name", current_scenario)
 ## 导出当前状态为可存档字典
 func to_save_dict() -> Dictionary:
 	return {
@@ -252,6 +298,8 @@ func to_save_dict() -> Dictionary:
 		"stability_history": stability_history,
 		"irreversible_damage": irreversible_damage,
 		"run_log": run_log,
+		"current_scenario": current_scenario,
+		"scenario_data": scenario_data,
 	}
 
 
@@ -283,3 +331,5 @@ func from_save_dict(d: Dictionary) -> void:
 	var causes: Array = d.get("identified_causes", [])
 	identified_causes.assign(causes)
 	run_log = d.get("run_log", [])
+	current_scenario = d.get("current_scenario", "default_alpha")
+	scenario_data = d.get("scenario_data", {})

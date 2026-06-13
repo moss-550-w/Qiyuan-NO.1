@@ -21,6 +21,8 @@ const DATA_FILES := {
 	"difficulty": "difficulty.json",
 	"balance": "balance.json",
 	"achievements": "achievements.json",
+
+	"scenarios": "scenarios.json",
 }
 
 const DATA_DIR := "res://data/"
@@ -108,6 +110,18 @@ func _validate() -> void:
 		if ending_count < 12:
 			validation_errors.append("endings 结局数 %d < 12，矩阵不完整" % ending_count)
 
+	# scenarios validation
+	if _store.has("scenarios"):
+		scen_cfg: Variant = _store["scenarios"]
+		if scen_cfg is Dictionary:
+			scen_list: Array = (scen_cfg as Dictionary).get("scenarios", [])
+			for si in scen_list:
+				if si is Dictionary:
+					var sd: Dictionary = si as Dictionary
+					_require_fields("scenarios[%s]" % si.get("id", "?"), sd, ["id", "name", "root_causes"])
+		else:
+			validation_errors.append("scenarios should be a Dictionary")
+
 
 ## 要求某顶层配置包含指定键
 func _require_keys(store_key: String, keys: Array) -> void:
@@ -168,3 +182,6 @@ func get_endings() -> Dictionary:
 
 func get_glossary() -> Array:
 	return _store.get("glossary", [])
+
+func get_scenarios() -> Dictionary:
+	return _store.get("scenarios", {})
