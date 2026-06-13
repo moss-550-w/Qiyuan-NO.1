@@ -142,7 +142,12 @@ func get_config(key: String) -> Variant:
 	return _store.get(key)
 
 func get_experts() -> Dictionary:
-	return _store.get("experts", {})
+	var raw: Dictionary = _store.get("experts", {})
+	var result: Dictionary = {}
+	for k in raw:
+		if raw[k] is Dictionary:
+			result[k] = raw[k]
+	return result
 
 func get_faults() -> Dictionary:
 	return _store.get("faults", {})

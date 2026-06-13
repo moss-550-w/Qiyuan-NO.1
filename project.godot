@@ -35,5 +35,5 @@ window/stretch/mode="canvas_items"
 
 [gui]
 
-theme/custom_font="res://assets/fonts/NotoSansSC-Regular.otf"
 theme/default_font_multichannel_signed_distance_field=true
+theme/custom_font="res://assets/fonts/NotoSansSC-Regular.otf"
