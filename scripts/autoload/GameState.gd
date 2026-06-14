@@ -240,11 +240,13 @@ func add_log(entry: Dictionary) -> void:
 
 ## 是否已是最后一轮
 func is_final_round() -> bool:
-	return current_round >= TOTAL_ROUNDS
+	var max_r: int
+	if TutorialCampaign.is_tutorial_active():
+		max_r = TutorialCampaign.get_round_count()
+	else:
+		max_r = TOTAL_ROUNDS
+	return current_round >= max_r
 
-
-
-## 随机抽取剧本
 func _select_scenario() -> void:
 	var configs: Variant = DataManager.get_config("scenarios")
 	if not (configs is Dictionary):
@@ -261,10 +263,6 @@ func _select_scenario() -> void:
 	current_scenario = chosen.get("id", "default_alpha")
 	scenario_data = chosen.duplicate(true)
 	print("[GameState] 抽取剧本: ", current_scenario)
-
-## 获取当前剧本的 root_causes 列表
-func get_scenario_root_causes() -> Array:
-	return scenario_data.get("root_causes", ["magnet_psu_aging", "wall_microcrack", "tritium_pump_decay"])
 
 ## 获取当前剧本的 gauge_offset
 func get_scenario_gauge_offset() -> Dictionary:
