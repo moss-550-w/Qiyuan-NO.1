@@ -1,5 +1,5 @@
 ﻿extends Node
-class_name TutorialCampaign
+
 ## TutorialCampaign —— 教学战役控制器（T3.3）
 ##
 ## 职责：
