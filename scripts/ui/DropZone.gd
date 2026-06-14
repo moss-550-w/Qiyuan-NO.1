@@ -1,4 +1,4 @@
-extends Panel
+﻿extends Panel
 class_name DropZone
 ## DropZone —— 装置部位投放区
 ##
@@ -77,3 +77,25 @@ func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT:
 		withdraw_requested.emit(part_id)
+## 高亮标记（教学战役用）
+var _highlighted: bool = false
+func set_highlight(on: bool) -> void:
+	_highlighted = on
+	if on:
+		add_theme_stylebox_override("panel", _get_highlight_stylebox())
+	else:
+		remove_theme_stylebox_override("panel")
+
+func _get_highlight_stylebox() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.17, 0.84, 1.0, 0.15)
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.border_color = Color(0.17, 0.84, 1.0, 0.8)
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	return sb

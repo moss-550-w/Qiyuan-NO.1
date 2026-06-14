@@ -133,7 +133,10 @@ func _on_cycle_difficulty() -> void:
 	SaveManager.settings["difficulty"] = nxt
 	SaveManager.save_settings()
 	_update_buttons()
+
+
 func _on_tutorial() -> void:
 	AudioManager.play("ui_click")
 	TutorialCampaign.start_chapter("ch1_basics")
 	get_tree().change_scene_to_file(CONTROL_ROOM)
+

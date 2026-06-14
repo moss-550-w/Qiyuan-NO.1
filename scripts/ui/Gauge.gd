@@ -1,4 +1,4 @@
-extends Panel
+﻿extends Panel
 class_name Gauge
 ## Gauge —— 可复用仪表盘组件
 ##
@@ -74,3 +74,25 @@ func set_chain_linked(on: bool) -> void:
 		_label.add_theme_color_override("font_color", COLOR_NORMAL)
 	else:
 		_label.remove_theme_color_override("font_color")
+## 高亮标记（教学战役用）
+var _highlighted: bool = false
+func set_highlight(on: bool) -> void:
+	_highlighted = on
+	if on:
+		add_theme_stylebox_override("panel", _get_highlight_stylebox())
+	else:
+		remove_theme_stylebox_override("panel")
+
+func _get_highlight_stylebox() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.17, 0.84, 1.0, 0.15)
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.border_color = Color(0.17, 0.84, 1.0, 0.8)
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	return sb
