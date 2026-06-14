@@ -1,4 +1,4 @@
-extends Node
+﻿extends Node
 ## GameState —— 全局运行态单例
 ##
 ## 持有一局游戏的实时状态：难度、轮次、Q值、稳定度、经费、根因识别情况、
@@ -18,7 +18,7 @@ signal round_changed(round_index: int)
 signal metrics_changed(q_value: float, stability: float, fuel_ratio: float)
 signal budget_changed(remaining: int, allocation: Dictionary)
 signal root_cause_identified(cause_id: String)
-signal game_over(ending_key: String)
+
 
 # --- 局内状态 ---
 var difficulty: String = "novice"

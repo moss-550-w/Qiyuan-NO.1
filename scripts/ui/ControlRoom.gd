@@ -843,20 +843,8 @@ func _highlight_target(target: String) -> void:
 	# 按钮高亮
 	elif target == "btn_log":
 		_btn_log.modulate = Color(1.0, 1.0, 0.5, 1.0)
+	
+
 func _on_back() -> void:
 	AudioManager.play("ui_click")
 	get_tree().change_scene_to_file("res://scenes/menu/MainMenu.tscn")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
