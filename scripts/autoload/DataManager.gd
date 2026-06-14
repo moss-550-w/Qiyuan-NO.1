@@ -1,4 +1,4 @@
-extends Node
+﻿extends Node
 ## DataManager —— 全局数据加载与校验单例
 ##
 ## 职责：
@@ -113,9 +113,9 @@ func _validate() -> void:
 
 	# scenarios validation
 	if _store.has("scenarios"):
-		scen_cfg: Variant = _store["scenarios"]
+		var scen_cfg: Variant = _store["scenarios"]
 		if scen_cfg is Dictionary:
-			scen_list: Array = (scen_cfg as Dictionary).get("scenarios", [])
+			var scen_list: Array = (scen_cfg as Dictionary).get("scenarios", [])
 			for si in scen_list:
 				if si is Dictionary:
 					var sd: Dictionary = si as Dictionary
