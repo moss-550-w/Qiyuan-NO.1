@@ -1,4 +1,4 @@
-# 聚变纪元 · 启元一号
+﻿# 聚变纪元 · 启元一号
 
 > 基于 Godot 4.6 的**纯单机离线**核聚变科普游戏 —— 体验"托卡马克装置中控室紧急排障"。
 > 零服务器、零网络请求、下载即玩。在四轮递进式耦合故障中扮演当班运行总工程师，拼合专家信息片段、分配维护经费、识破故障根因，强行维持等离子体。
@@ -186,10 +186,11 @@ res://
 │   ├── balance.json           # 核心数值平衡（公式系数、奖惩阈值）
 │   ├── popups.json            # 浮动科普标签
 │   ├── kb_glossary.json       # 手册：科普词条
-│   └── kb_timeline.json       # 手册：成果/辟谣/就业
+│   ├── kb_timeline.json       # 手册：成果/辟谣/就业
+│   └── tutorial.json          # 教学战役三章配置
 ├── scripts/
 │   ├── autoload/              # 单例：DataManager / GameState / SaveManager / AudioManager
-│   ├── core/                  # 业务：FusionEngine / FaultTree / BriefingSystem / EndingResolver
+│   ├── core/                  # 业务：FusionEngine / FaultTree / BriefingSystem / EndingResolver / TutorialCampaign
 │   └── ui/                    # 视图脚本（含 TrendChart / TokamakAnimation 等）
 ├── scenes/
 │   ├── menu/                  # 主菜单 + 设置面板
@@ -273,7 +274,7 @@ res://
 ### V3.1 优化版（进行中）
 - [x] **Phase 1**：仪表跨轮趋势折线图、确定性周期噪声、超额投入奖励、行为成就系统、逻辑一致性提示
 - [x] **Phase 2**：专家信任度→精度模型、深度诊断趋势报告、故障链耦合（⇌链路角标）、不可逆损伤内生后果、挑战难度模式
-- [ ] **Phase 3**：锁定预览取代实时悬停预测、手作剧本随机抽取、复盘三图 + 教学战役模式
+- [ ] **Phase 3**：锁定预览取代实时悬停预测（T3.1）、手作剧本随机抽取（T3.2）
 
 ---
 
@@ -290,3 +291,7 @@ res://
 ---
 
 *纯单机离线 · 配置化驱动 · 深度科普可控核聚变 · V3.1*
+
+
+
+

@@ -280,7 +280,11 @@ func _start_round(r: int, is_resume: bool = false) -> void:
 	GameState.start_round(r, not is_resume)
 	_btn_submit.disabled = false
 	_clear_popups()
-	var total_r: int = TutorialCampaign.get_round_count() if TutorialCampaign.is_tutorial_active() else GameState.TOTAL_ROUNDS
+	var total_r: int
+	if TutorialCampaign.is_tutorial_active():
+		total_r = TutorialCampaign.get_round_count()
+	else:
+		total_r = GameState.TOTAL_ROUNDS
 	_title.text = "启元一号 · 中控台 ｜ 第 %d 轮 / %d" % [r, total_r]
 	_update_timer_label()
 
