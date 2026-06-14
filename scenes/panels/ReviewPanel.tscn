@@ -1,0 +1,58 @@
+﻿[gd_scene load_steps=3 format=3]
+
+[ext_resource type=Script path=res://scripts/ui/ReviewPanel.gd id=1]
+[ext_resource type=Script path=res://scripts/ui/BarChart.gd id=2]
+[ext_resource type=Script path=res://scripts/ui/FaultTrendChart.gd id=3]
+
+[node name=ReviewPanel type=Control]
+layout_mode = 6
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource(1)
+
+[node name=Dimmer type=ColorRect parent=.]
+layout_mode = 6
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name=Center type=CenterContainer parent=Dimmer]
+layout_mode = 1
+expansion_rect_size_x = 900
+expansion_rect_size_y = 600
+
+[node name=Panel type=Panel parent=Center]
+layout_mode = 6
+
+[node name=Margin type=MarginContainer parent=Center/Panel]
+layout_mode = 6
+
+[node name=VBox type=VBoxContainer parent=Center/Panel/Margin]
+layout_mode = 6
+separation = 12
+
+[node name=Header type=HBoxContainer parent=Center/Panel/Margin/VBox]
+layout_mode = 6
+size_flags_horizontal = 3
+
+[node name=Title type=Label parent=Center/Panel/Margin/VBox/Header]
+layout_mode = 6
+text = 复盘
+h_size_flags = 3
+vertical_alignment = 1
+
+[node name=BtnClose type=Button parent=Center/Panel/Margin/VBox/Header]
+layout_mode = 6
+text = 关闭
+
+[node name=Charts type=VBoxContainer parent=Center/Panel/Margin/VBox]
+layout_mode = 6
+size_flags_horizontal = 3
+size_flags_vertical = 3
+separation = 16

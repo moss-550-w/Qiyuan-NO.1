@@ -26,6 +26,7 @@ DataManager="*res://scripts/autoload/DataManager.gd"
 GameState="*res://scripts/autoload/GameState.gd"
 SaveManager="*res://scripts/autoload/SaveManager.gd"
 AudioManager="*res://scripts/autoload/AudioManager.gd"
+TutorialCampaign="*res://scripts/core/TutorialCampaign.gd"
 
 [display]
 

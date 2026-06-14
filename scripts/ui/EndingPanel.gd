@@ -6,6 +6,7 @@ extends Control
 ## 提供"再来一局"与"返回菜单"。
 
 const ANIM_SCENE := preload("res://scenes/fx/TokamakAnimation.tscn")
+const REVIEW_SCENE := preload("res://scenes/panels/ReviewPanel.tscn")
 
 @onready var _center: CenterContainer = $Center
 @onready var _title: Label = $Center/Panel/Margin/VBox/EndingTitle
@@ -17,6 +18,7 @@ const ANIM_SCENE := preload("res://scenes/fx/TokamakAnimation.tscn")
 @onready var _btn_menu: Button = $Center/Panel/Margin/VBox/Buttons/BtnMenu
 
 var _anim: TokamakAnimation = null
+var _review_panel: ReviewPanel = null
 var _revealed: bool = false
 
 
@@ -47,6 +49,12 @@ func _ready() -> void:
 	move_child(_anim, 1)   # 置于 BG 之上、卡片(Center)之下
 	_anim.set_outcome(EndingResolver.q_band_key(q))
 	_anim.finished.connect(_reveal_card)
+
+	# 复盘面板
+	_review_panel = REVIEW_SCENE.instantiate()
+	add_child(_review_panel)
+	if _btn_review:
+		_btn_review.pressed.connect(_on_review)
 
 
 ## 动画结束/跳过：装置动画淡为背景，结局卡片滑入 + 淡入
@@ -120,3 +128,8 @@ func _on_replay() -> void:
 func _on_menu() -> void:
 	AudioManager.play("ui_click")
 	get_tree().change_scene_to_file("res://scenes/menu/MainMenu.tscn")
+
+
+func _on_review() -> void:
+	if _review_panel:
+		_review_panel.open()

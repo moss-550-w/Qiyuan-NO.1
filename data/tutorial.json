@@ -1,0 +1,269 @@
+{
+  "_comment": "教学战役配置：渐进解锁三章，每章限制可用专家与部位，配脚本化引导。标准模式与教学模式独立，互不污染成就与存档。",
+  "chapters": [
+    {
+      "id": "ch1_basics",
+      "name": "第一章：磁场与第一壁",
+      "description": "学习阅读仪表与专家简报，诊断磁体电源老化和第一壁微裂纹。仅开放磁体与第一壁两个子系统。",
+      "unlock_condition": "default",
+      "parts_enabled": ["magnet_coil", "first_wall"],
+      "experts_enabled": ["magnet_eng", "wall_eng"],
+      "round_count": 3,
+      "budget_per_round": 80,
+      "difficulty_overrides": {
+        "time_limit": 0,
+        "gauge_noise": { "amp": 0, "freq": 0 },
+        "highlight_suspect": true,
+        "show_hint_dash": true
+      },
+      "scenario": {
+        "root_causes": ["magnet_psu_aging", "wall_microcrack"],
+        "rounds": [
+          {
+            "round": 1,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.08 }
+            ]
+          },
+          {
+            "round": 2,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.12 },
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.10 }
+            ]
+          },
+          {
+            "round": 3,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.15 },
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.18 }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "trigger": "on_round_start",
+          "round": 1,
+          "message": "【教学】欢迎来到第一章。本轮请留意「环向场强度」仪表——它已低于正常范围。左侧是两位专家的简报，可作为诊断参考。",
+          "pause_game": true,
+          "highlight": "gauge_toroidal_field"
+        },
+        {
+          "trigger": "on_before_submit",
+          "round": 1,
+          "message": "【教学】磁体工程师指出环向场下滑。尝试将经费代币拖入「磁体线圈」区域进行修复，然后点击提交。",
+          "pause_game": false,
+          "highlight": "zone_magnet_coil"
+        },
+        {
+          "trigger": "on_after_submit",
+          "round": 1,
+          "message": "【教学】很好。若投入足够，磁体电源老化将被识别并处置。进入下一轮，观察壁温变化。",
+          "pause_game": true
+        },
+        {
+          "trigger": "on_round_start",
+          "round": 2,
+          "message": "【教学】本轮出现两个异常：环向场继续下滑，同时「第一壁温度」开始走高。你需要在两个部位之间分配预算。",
+          "pause_game": true,
+          "highlight": "gauge_wall_temp"
+        },
+        {
+          "trigger": "on_before_submit",
+          "round": 2,
+          "message": "【教学】建议同时对磁体线圈和第一壁投入经费。不必追求完美分配，优先修复偏差更严重的部位即可。",
+          "pause_game": false
+        },
+        {
+          "trigger": "on_after_submit",
+          "round": 2,
+          "message": "【教学】第二轮结束。注意对比两轮仪表趋势，渐变型故障往往指向同一根因。",
+          "pause_game": true
+        },
+        {
+          "trigger": "on_round_start",
+          "round": 3,
+          "message": "【教学】最终轮。若前两轮已对症投入，本轮故障强度会减轻；否则会恶化。提交本轮后将进入结算。",
+          "pause_game": true
+        },
+        {
+          "trigger": "on_chapter_complete",
+          "message": "【教学】第一章完成。你已掌握基础诊断与经费分配。第二章将引入氚增殖包层系统。",
+          "pause_game": true,
+          "unlock_next": true
+        }
+      ]
+    },
+    {
+      "id": "ch2_tritium",
+      "name": "第二章：氚燃料循环",
+      "description": "在磁体与第一壁基础上，引入氚提取泵效率下降故障，学习三部位平衡投入。",
+      "unlock_condition": "complete_ch1",
+      "parts_enabled": ["magnet_coil", "first_wall", "breeder_blanket"],
+      "experts_enabled": ["magnet_eng", "wall_eng", "tritium_eng"],
+      "round_count": 4,
+      "budget_per_round": 90,
+      "difficulty_overrides": {
+        "time_limit": 0,
+        "gauge_noise": { "amp": 0, "freq": 0 },
+        "highlight_suspect": true,
+        "show_hint_dash": true
+      },
+      "scenario": {
+        "root_causes": ["magnet_psu_aging", "wall_microcrack", "tritium_pump_decay"],
+        "rounds": [
+          {
+            "round": 1,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.06 }
+            ]
+          },
+          {
+            "round": 2,
+            "symptoms": [
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.10 },
+              { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.08 }
+            ]
+          },
+          {
+            "round": 3,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.10 },
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.14 },
+              { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.12 }
+            ]
+          },
+          {
+            "round": 4,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.14 },
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.18 },
+              { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.16 }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "trigger": "on_chapter_start",
+          "message": "【教学】第二章开启。新增「氚增殖包层」部位与氚循环工程师。关注「氚自持率 TBR」仪表。",
+          "pause_game": true,
+          "highlight": "gauge_tritium_ratio"
+        },
+        {
+          "trigger": "on_round_start",
+          "round": 2,
+          "message": "【教学】本轮壁温与氚率同时异常。注意三位专家的简报差异：每位专家只精确掌握自己负责的仪表，对他人部位只能间接推断。",
+          "pause_game": true
+        },
+        {
+          "trigger": "on_before_submit",
+          "round": 2,
+          "message": "【教学】尝试在不同部位间分配经费。如果某部位投入超过 50，下一轮该部位关联根因会获得 5% 减免（超额投入奖励）。",
+          "pause_game": false
+        },
+        {
+          "trigger": "on_round_start",
+          "round": 3,
+          "message": "【教学】三个故障同时活跃。此时应回顾前两轮的趋势：哪两个仪表是渐变下滑？哪个是突然跳变？渐变往往指向持续恶化的根因。",
+          "pause_game": true
+        },
+        {
+          "trigger": "on_before_submit",
+          "round": 4,
+          "message": "【教学】最终轮。若某根因尚未被识别，请优先向对应部位投入足够经费（建议≥30）。",
+          "pause_game": false
+        },
+        {
+          "trigger": "on_chapter_complete",
+          "message": "【教学】第二章完成。你已学会在三部位间权衡，并理解专家信息差。第三章将开放完整的等离子体控制系统。",
+          "pause_game": true,
+          "unlock_next": true
+        }
+      ]
+    },
+    {
+      "id": "ch3_full",
+      "name": "第三章：全系统综合",
+      "description": "开放全部四部位与四位专家，体验完整的四轮递进故障诊断。",
+      "unlock_condition": "complete_ch2",
+      "parts_enabled": ["magnet_coil", "first_wall", "breeder_blanket", "plasma_control"],
+      "experts_enabled": ["magnet_eng", "wall_eng", "tritium_eng", "plasma_eng"],
+      "round_count": 4,
+      "budget_per_round": 100,
+      "difficulty_overrides": {
+        "time_limit": 0,
+        "gauge_noise": { "amp": 0, "freq": 0 },
+        "highlight_suspect": true,
+        "show_hint_dash": true
+      },
+      "scenario": {
+        "root_causes": ["magnet_psu_aging", "wall_microcrack", "tritium_pump_decay"],
+        "rounds": [
+          {
+            "round": 1,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.06 }
+            ]
+          },
+          {
+            "round": 2,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.10 },
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.08 }
+            ]
+          },
+          {
+            "round": 3,
+            "symptoms": [
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.14 },
+              { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.12 }
+            ]
+          },
+          {
+            "round": 4,
+            "symptoms": [
+              { "cause": "magnet_psu_aging", "gauge": "toroidal_field", "deviation": -0.15 },
+              { "cause": "wall_microcrack", "gauge": "wall_temp", "deviation": 0.20 },
+              { "cause": "tritium_pump_decay", "gauge": "tritium_ratio", "deviation": -0.20 }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "trigger": "on_chapter_start",
+          "message": "【教学】第三章：全系统开放。等离子体物理师加入团队，他负责等离子体温度，但没有对应的独立根因——他的信息是跨系统的综合推断。",
+          "pause_game": true,
+          "highlight": "expert_plasma_eng"
+        },
+        {
+          "trigger": "on_round_start",
+          "round": 3,
+          "message": "【教学】从本轮起，如果主因未修复，可能出现「故障链」——例如磁体约束弱化会导致第一壁热斑。观察仪表上的链路角标「⇌」。",
+          "pause_game": true
+        },
+        {
+          "trigger": "on_before_submit",
+          "round": 3,
+          "message": "【教学】面对耦合故障，优先消除根源（如磁体）可以缓解次因（如壁温），但可能需要同时给第一壁降温以争取时间。",
+          "pause_game": false
+        },
+        {
+          "trigger": "on_round_start",
+          "round": 4,
+          "message": "【教学】决战轮。此时已修复的根因不再产生新症状，未修复的根因会大幅恶化。点击 L 键可呼出历史日志，查看趋势曲线辅助决策。",
+          "pause_game": true,
+          "highlight": "btn_log"
+        },
+        {
+          "trigger": "on_chapter_complete",
+          "message": "【教学】教学战役全部完成！你已掌握启元一号的基础操作。返回主菜单可进入「标准模式」，体验随机剧本与更多挑战。",
+          "pause_game": true,
+          "unlock_next": false
+        }
+      ]
+    }
+  ]
+}

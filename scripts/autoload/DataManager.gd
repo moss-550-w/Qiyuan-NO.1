@@ -21,6 +21,7 @@ const DATA_FILES := {
 	"difficulty": "difficulty.json",
 	"balance": "balance.json",
 	"achievements": "achievements.json",
+	"tutorial": "tutorial.json",
 
 	"scenarios": "scenarios.json",
 }
@@ -121,6 +122,20 @@ func _validate() -> void:
 					_require_fields("scenarios[%s]" % si.get("id", "?"), sd, ["id", "name", "root_causes"])
 		else:
 			validation_errors.append("scenarios should be a Dictionary")
+
+	# tutorial validation
+	if _store.has("tutorial"):
+		var tut_cfg: Variant = _store["tutorial"]
+		if tut_cfg is Dictionary:
+			var chapters: Array = (tut_cfg as Dictionary).get("chapters", [])
+			if chapters.is_empty():
+				validation_errors.append("tutorial chapters 为空")
+			for ci in chapters:
+				if ci is Dictionary:
+					var cd: Dictionary = ci as Dictionary
+					_require_fields("tutorial[%s]" % cd.get("id", "?"), cd, ["id", "name", "parts_enabled", "experts_enabled", "steps"])
+		else:
+			validation_errors.append("tutorial should be a Dictionary")
 
 
 ## 要求某顶层配置包含指定键

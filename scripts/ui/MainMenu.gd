@@ -1,4 +1,4 @@
-extends Control
+﻿extends Control
 ## MainMenu —— 主菜单 + 启动自检 + 难度选择 + 续档入口
 ##
 ## 职责：
@@ -18,6 +18,7 @@ const DIFFICULTY_CYCLE := ["novice", "chief", "custom", "challenge"]
 @onready var _btn_difficulty: Button = $Center/Panel/Margin/VBox/Buttons/BtnDifficulty
 @onready var _btn_settings: Button = $Center/Panel/Margin/VBox/Buttons/BtnSettings
 @onready var _btn_refresh: Button = $Center/Panel/Margin/VBox/Buttons/BtnRefresh
+@onready var _btn_tutorial: Button = $Center/Panel/Margin/VBox/Buttons/BtnTutorial
 
 var _gauges: Array[Gauge] = []
 var _settings_panel: SettingsPanel = null
@@ -29,6 +30,7 @@ func _ready() -> void:
 	_btn_difficulty.pressed.connect(_on_cycle_difficulty)
 	_btn_settings.pressed.connect(_on_settings)
 	_btn_refresh.pressed.connect(_run_self_check)
+	_btn_tutorial.pressed.connect(_on_tutorial)
 	_settings_panel = SETTINGS_SCENE.instantiate()
 	add_child(_settings_panel)
 	_settings_panel.settings_changed.connect(_update_buttons)
@@ -131,3 +133,7 @@ func _on_cycle_difficulty() -> void:
 	SaveManager.settings["difficulty"] = nxt
 	SaveManager.save_settings()
 	_update_buttons()
+func _on_tutorial() -> void:
+	AudioManager.play("ui_click")
+	TutorialCampaign.start_chapter("ch1_basics")
+	get_tree().change_scene_to_file(CONTROL_ROOM)

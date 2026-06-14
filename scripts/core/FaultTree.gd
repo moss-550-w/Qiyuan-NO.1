@@ -11,9 +11,28 @@ class_name FaultTree
 ## 以便悬停预测时传入"假想分配"复用同一套逻辑。无副作用，evaluate_round 除外。
 
 
-## 取某轮的配置块
+## 教学战役临时覆盖数据（由 TutorialCampaign 注入/清除）
+static var _tutorial_override: Dictionary = {}
+
+static func set_tutorial_override(data: Dictionary) -> void:
+	_tutorial_override = data
+
+static func clear_tutorial_override() -> void:
+	_tutorial_override = {}
+
+## 获取根因定义（优先教学覆盖）
+static func get_root_causes() -> Dictionary:
+	if _tutorial_override.has("root_causes"):
+		return _tutorial_override["root_causes"] as Dictionary
+	return DataManager.get_faults().get("root_causes", {})
+
+## 取某轮的配置块（优先教学覆盖）
 static func round_data(round_index: int) -> Dictionary:
-	var rounds: Array = DataManager.get_faults().get("rounds", [])
+	var rounds: Array = []
+	if _tutorial_override.has("rounds"):
+		rounds = _tutorial_override["rounds"] as Array
+	else:
+		rounds = DataManager.get_faults().get("rounds", [])
 	for r in rounds:
 		if int((r as Dictionary).get("round", -1)) == round_index:
 			return r
@@ -39,7 +58,7 @@ static func round_active_causes(round_index: int) -> Array:
 static func repair_ratio(cause_id: String, alloc: Variant = null) -> float:
 	if alloc == null:
 		alloc = GameState.round_allocation
-	var rc: Dictionary = DataManager.get_faults().get("root_causes", {}).get(cause_id, {})
+	var rc: Dictionary = get_root_causes().get(cause_id, {})
 	var fix_part: String = rc.get("fix_part", "")
 	var threshold: float = float(rc.get("fix_threshold", 35))
 	if threshold <= 0.0 or fix_part == "":
@@ -50,7 +69,7 @@ static func repair_ratio(cause_id: String, alloc: Variant = null) -> float:
 
 ## 某根因本轮的"超额投入减免"系数（0,1]：上一轮在其修复部位超额投入则 <1，否则 1。
 static func bonus_factor(cause_id: String) -> float:
-	var rc: Dictionary = DataManager.get_faults().get("root_causes", {}).get(cause_id, {})
+	var rc: Dictionary = get_root_causes().get(cause_id, {})
 	var fix_part: String = rc.get("fix_part", "")
 	if fix_part == "" or not GameState.over_invest_bonus(fix_part):
 		return 1.0
@@ -60,7 +79,7 @@ static func bonus_factor(cause_id: String) -> float:
 
 ## 某根因因"不可逆损伤"被放大的强度系数（≥1）：其修复部位损伤越深，故障越强。
 static func damage_factor(cause_id: String) -> float:
-	var rc: Dictionary = DataManager.get_faults().get("root_causes", {}).get(cause_id, {})
+	var rc: Dictionary = get_root_causes().get(cause_id, {})
 	var fix_part: String = rc.get("fix_part", "")
 	if fix_part == "":
 		return 1.0
@@ -171,5 +190,5 @@ static func evaluate_round(round_index: int) -> Array:
 
 ## 取根因显示名
 static func cause_name(cause_id: String) -> String:
-	var rc: Dictionary = DataManager.get_faults().get("root_causes", {}).get(cause_id, {})
+	var rc: Dictionary = get_root_causes().get(cause_id, {})
 	return rc.get("name", cause_id)
