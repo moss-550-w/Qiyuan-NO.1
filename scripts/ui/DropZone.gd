@@ -3,12 +3,11 @@ class_name DropZone
 ## DropZone —— 装置部位投放区
 ##
 ## 接收 BudgetToken 拖放，对应装置四部位之一。
-## - 悬停合法代币时发出 hover_preview，供 ControlRoom 显示"投入后预测"。
+## - 悬停合法代币时仅启用落点高亮，不再做"假想增量预测"（决策B：彻底关闭悬停试探）。
 ## - 落定时发出 token_dropped，由 ControlRoom 调用 GameState.allocate。
 ## - 右键点击发出 withdraw_requested，撤回本部位投入。
 ## 自身实时显示累计投入与部位健康度（经费效果 0~100%）。
 
-signal hover_preview(part_id: String, amount: int)
 signal token_dropped(part_id: String, amount: int)
 signal withdraw_requested(part_id: String)
 
@@ -63,10 +62,7 @@ func set_hint(on: bool) -> void:
 # --- Godot 拖放接口 ---
 
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	if typeof(data) == TYPE_DICTIONARY and data.get("type", "") == BudgetToken.DRAG_TYPE:
-		hover_preview.emit(part_id, int(data.get("amount", 0)))
-		return true
-	return false
+	return typeof(data) == TYPE_DICTIONARY and data.get("type", "") == BudgetToken.DRAG_TYPE
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:

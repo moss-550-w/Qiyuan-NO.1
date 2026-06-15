@@ -37,7 +37,6 @@ var _gauge_base: Dictionary = {}      # gauge_id → 基准读数
 var _zones: Array[DropZone] = []
 var _part_labels: Dictionary = {}     # part_id → 显示名
 var _actual: Dictionary = {"q": 1.0, "stability": 1.0, "fuel": 1.0}
-var _predicting: bool = false
 var _manual: ManualPanel = null
 var _log_panel: LogPanel = null
 var _plasma: PlasmaCore = null
@@ -130,9 +129,6 @@ func _on_log() -> void:
 
 
 func _process(_dt: float) -> void:
-	if _predicting and not get_viewport().gui_is_dragging():
-		_predicting = false
-		_show_actual()
 	_tick_timer(_dt)
 	_pulse_alarm(_dt)
 
@@ -255,7 +251,6 @@ func _wire_zones() -> void:
 			_part_labels[zone.part_id] = zone.part_label
 			zone.token_dropped.connect(_on_token_dropped)
 			zone.withdraw_requested.connect(_on_withdraw)
-			zone.hover_preview.connect(_on_hover_preview)
 
 
 func _rebuild_pool() -> void:
@@ -674,14 +669,6 @@ func _on_withdraw(part_id: String) -> void:
 		_settle()
 
 
-func _on_hover_preview(part_id: String, amount: int) -> void:
-	if GameState.budget_remaining < amount:
-		return
-	_predicting = true
-	var pred: Dictionary = FusionEngine.predict_with_extra(part_id, amount)
-	_show_prediction(part_id, amount, pred)
-
-
 # ---------------------------------------------------------------------------
 # 结算与显示
 # ---------------------------------------------------------------------------
@@ -757,19 +744,6 @@ func _show_actual() -> void:
 	]
 
 
-func _show_prediction(part_id: String, amount: int, pred: Dictionary) -> void:
-	var dq: float = float(pred["q"]) - float(_actual["q"])
-	var ds: float = (float(pred["stability"]) - float(_actual["stability"])) * 100.0
-	var df: float = (float(pred["fuel"]) - float(_actual["fuel"])) * 100.0
-	var label: String = _part_labels.get(part_id, part_id)
-	_metrics.text = "[b][color=#2bd6ff]预测[/color][/b] 向 %s 投入 +%d → Q %s(%s)  稳定 %d%%(%s)  燃料 %d%%(%s)" % [
-		label, amount,
-		_fmt_q(float(pred["q"])), _fmt_delta(dq, 2),
-		roundi(float(pred["stability"]) * 100.0), _fmt_delta(ds, 0),
-		roundi(float(pred["fuel"]) * 100.0), _fmt_delta(df, 0),
-	]
-
-
 # --- 文本辅助 ---
 
 func _round_intro(r: int) -> String:
@@ -799,14 +773,6 @@ func _fmt_pct(ratio: float, warn_below: int) -> String:
 	var pct: int = roundi(ratio * 100.0)
 	var color := "#4ed36a" if pct >= warn_below else "#e64040"
 	return "[color=%s]%d%%[/color]" % [color, pct]
-
-
-func _fmt_delta(d: float, decimals: int) -> String:
-	var arrow := "↑" if d >= 0.0 else "↓"
-	var color := "#4ed36a" if d >= 0.0 else "#e64040"
-	var num: String = String.num(absf(d), decimals)
-	return "[color=%s]%s%s[/color]" % [color, arrow, num]
-
 
 
 # ---------------------------------------------------------------------------
