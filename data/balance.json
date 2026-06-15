@@ -39,9 +39,10 @@
     "heavy_elsewhere_ratio": 0.5
   },
   "expert_trust": {
-    "_comment": "专家信任度→情报精度(非说谎)。initial=初始信任；trust≥precise_threshold 用 precise 简报(窄区间/确定语气)，否则用 vague(模糊)。采信正确警告(其部位有故障且玩家投入)+trust_gain；无视则-trust_loss。低信任(<jitter_trust_threshold)时其负责仪表叠加规律抖动 amp=jitter_amp*(1-trust)。",
+    "_comment": "专家信任度→情报精度(非说谎)。initial=初始信任；trust≥precise_threshold 用 precise 简报(窄区间/确定语气)，否则用 vague(模糊)。采信正确警告(其部位有故障且玩家投入)+trust_gain；无视则-trust_loss。低信任(<jitter_trust_threshold)时其负责仪表叠加规律抖动 amp=jitter_amp*(1-trust)。剧本角色(scenarios.expert_roles)：observer 恒模糊；secondary 需 trust≥precise_threshold+secondary_precise_penalty 才精确；primary 同基础阈值。",
     "initial": 0.6,
     "precise_threshold": 0.5,
+    "secondary_precise_penalty": 0.15,
     "trust_gain": 0.15,
     "trust_loss": 0.2,
     "invest_heed_ratio": 0.1,

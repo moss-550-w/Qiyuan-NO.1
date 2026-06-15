@@ -71,7 +71,7 @@
         "plasma_temp": -0.01
       },
       "chains": [
-        "magnet_first_wall_heat"
+        "magnet_to_wall_hotspot"
       ],
       "trigger_round": 3
     },
@@ -147,7 +147,7 @@
         "plasma_temp": -0.02
       },
       "chains": [
-        "magnet_first_wall_heat",
+        "magnet_to_wall_hotspot",
         "tritium_magnet_constraint"
       ],
       "trigger_round": 2

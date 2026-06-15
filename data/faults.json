@@ -32,6 +32,15 @@
       "secondary_deviation_sign": 1,
       "coupling": 0.5,
       "trigger_round": 3
+    },
+    {
+      "_comment": "氚提取衰退→磁体约束受限：泵效下降迫使运行参数退让，环向场出现同步性下探。识别线索：氚自持率与环向场异常轮次同步；氚专家提'余量吃紧'，磁体专家觉'约束略被动'，但均不主动关联。",
+      "id": "tritium_magnet_constraint",
+      "primary": "tritium_pump_decay",
+      "secondary_gauge": "toroidal_field",
+      "secondary_deviation_sign": -1,
+      "coupling": 0.5,
+      "trigger_round": 3
     }
   ],
   "rounds": [

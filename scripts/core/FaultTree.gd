@@ -20,6 +20,28 @@ static func set_tutorial_override(data: Dictionary) -> void:
 static func clear_tutorial_override() -> void:
 	_tutorial_override = {}
 
+
+# ---------------------------------------------------------------------------
+# 剧本（scenario）上下文：随机抽取的剧本驱动“激活根因 / 仪表偏移 / 故障链”。
+# 教学模式或无剧本（scenario_data 为空）时全部回退 V3.0 行为，向下兼容。
+# ---------------------------------------------------------------------------
+
+## 当前剧本配置：教学覆盖生效或无剧本时返回空字典（→ 不限定、无偏移、用 faults.json 链）
+static func _scenario() -> Dictionary:
+	if not _tutorial_override.is_empty():
+		return {}
+	return GameState.scenario_data
+
+## 剧本限定的激活根因列表（空 = 不限定，所有根因可激活）
+static func _scenario_causes() -> Array:
+	return _scenario().get("root_causes", [])
+
+## 剧本对某仪表的基准偏移（无剧本则 0）
+static func _scenario_gauge_offset(gauge_id: String) -> float:
+	var off: Dictionary = _scenario().get("gauge_offset", {})
+	return float(off.get(gauge_id, 0.0))
+
+
 ## 获取根因定义（优先教学覆盖）
 static func get_root_causes() -> Dictionary:
 	if _tutorial_override.has("root_causes"):
@@ -39,9 +61,17 @@ static func round_data(round_index: int) -> Dictionary:
 	return {}
 
 
-## 某轮的表象列表
+## 某轮的表象列表（按当前剧本限定的激活根因过滤；无剧本则原样返回）
 static func round_symptoms(round_index: int) -> Array:
-	return round_data(round_index).get("symptoms", [])
+	var raw: Array = round_data(round_index).get("symptoms", [])
+	var limit: Array = _scenario_causes()
+	if limit.is_empty():
+		return raw
+	var filtered: Array = []
+	for s in raw:
+		if limit.has((s as Dictionary).get("cause", "")):
+			filtered.append(s)
+	return filtered
 
 
 ## 某轮涉及的根因 id（去重）
@@ -96,12 +126,32 @@ static func strength_factor(cause_id: String) -> float:
 
 
 ## 本轮已激活的故障链（round ≥ trigger_round 且主因本轮在场）
+## 剧本激活时仅启用剧本声明的链，并统一用剧本 trigger_round；无剧本/教学则用 faults.json 全部链（V3.0）。
 static func active_chains(round_index: int) -> Array:
 	var result: Array = []
 	var active: Array = round_active_causes(round_index)
-	for ch in DataManager.get_faults().get("fault_chains", []):
-		var cd: Dictionary = ch
-		if round_index >= int(cd.get("trigger_round", 99)) and active.has(cd.get("primary", "")):
+	var all_chains: Array = DataManager.get_faults().get("fault_chains", [])
+	var scen: Dictionary = _scenario()
+
+	if scen.is_empty():
+		for ch in all_chains:
+			var cd: Dictionary = ch
+			if round_index >= int(cd.get("trigger_round", 99)) and active.has(cd.get("primary", "")):
+				result.append(cd)
+		return result
+
+	var ids: Array = scen.get("chains", [])
+	if ids.is_empty():
+		return result
+	var scen_trigger: int = int(scen.get("trigger_round", 3))
+	var by_id: Dictionary = {}
+	for ch in all_chains:
+		by_id[(ch as Dictionary).get("id", "")] = ch
+	for cid in ids:
+		var cd: Dictionary = by_id.get(cid, {})
+		if cd.is_empty():
+			continue
+		if round_index >= scen_trigger and active.has(cd.get("primary", "")):
 			result.append(cd)
 	return result
 
@@ -142,6 +192,7 @@ static func gauge_reading(round_index: int, gauge_id: String, base: float, alloc
 			var repair: float = repair_ratio(cause, alloc)
 			dev_sum += float(sd.get("deviation", 0.0)) * (1.0 - repair) * strength_factor(cause)
 	dev_sum += chain_gauge_extra(round_index, gauge_id, alloc)
+	dev_sum += _scenario_gauge_offset(gauge_id)
 	return base * (1.0 + dev_sum)
 
 
