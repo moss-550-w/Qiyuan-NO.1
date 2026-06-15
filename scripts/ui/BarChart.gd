@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 class_name BarChart
 ## BarChart — 经费分配比例水平条形图（T3.3 图1）
 ##

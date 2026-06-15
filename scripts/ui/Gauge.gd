@@ -1,4 +1,4 @@
-﻿extends Panel
+extends Panel
 class_name Gauge
 ## Gauge —— 可复用仪表盘组件
 ##

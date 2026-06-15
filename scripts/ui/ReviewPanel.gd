@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 class_name ReviewPanel
 ## ReviewPanel — 复盘三图面板（T3.3）
 ##

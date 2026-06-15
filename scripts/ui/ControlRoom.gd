@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 ## ControlRoom —— 中控台主场景（D3：故障联动 + 轮次提交结算）
 ##
 ## 在 D2 拖放/预测基础上接入 FaultTree：

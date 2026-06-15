@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 class_name FaultTrendChart
 ## FaultTrendChart — 故障强度变化折线图（T3.3 图2）
 ##

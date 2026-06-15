@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 class_name LockPreviewPanel
 
 signal confirmed

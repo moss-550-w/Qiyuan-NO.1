@@ -1,4 +1,4 @@
-﻿extends Node
+extends Node
 ## GameState —— 全局运行态单例
 ##
 ## 持有一局游戏的实时状态：难度、轮次、Q值、稳定度、经费、根因识别情况、

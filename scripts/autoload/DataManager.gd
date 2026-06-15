@@ -1,4 +1,4 @@
-﻿extends Node
+extends Node
 ## DataManager —— 全局数据加载与校验单例
 ##
 ## 职责：

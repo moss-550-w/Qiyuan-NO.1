@@ -1,4 +1,4 @@
-﻿extends Node
+extends Node
 
 ## TutorialCampaign —— 教学战役控制器（T3.3）
 ##

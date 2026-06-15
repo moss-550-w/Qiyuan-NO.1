@@ -1,4 +1,4 @@
-﻿extends Panel
+extends Panel
 class_name DropZone
 ## DropZone —— 装置部位投放区
 ##

@@ -1,4 +1,4 @@
-﻿extends Control
+extends Control
 ## MainMenu —— 主菜单 + 启动自检 + 难度选择 + 续档入口
 ##
 ## 职责：
