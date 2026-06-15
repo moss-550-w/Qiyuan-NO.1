@@ -75,10 +75,9 @@ func _draw() -> void:
 		draw_string(font, Vector2(x - 12.0, plot_b + 14.0), "R%d" % rn,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.55, 0.62, 0.72))
 
-	# 绘制每个根因的修复进度
+	# 绘制每个根因的修复进度折线
 	for cid in _root_causes:
 		var color: Color = CAUSE_COLORS.get(cid, Color.GRAY)
-		var label: String = CAUSE_LABELS.get(cid, cid)
 		var pts: PackedVector2Array = PackedVector2Array()
 
 		for i in range(round_count):
@@ -94,9 +93,15 @@ func _draw() -> void:
 		for p in pts:
 			draw_circle(p, 4.0, color)
 
-		# 图例
-		var legend_x: float = plot_l + plot_w * 0.5 + 10.0
-		var legend_y: float = plot_t - 20.0
-		draw_rect(Rect2(legend_x, legend_y, 10.0, 10.0), color, true)
-		draw_string(font, Vector2(legend_x + 14.0, legend_y + 9.0), label,
+	# 图例：顶部水平排列（修复原先三条标签叠画在同一坐标的 bug）
+	var legend_x: float = plot_l + font.get_string_size(
+		"修复进度", HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 24.0
+	var legend_y: float = plot_t - 18.0
+	for cid in _root_causes:
+		var lcolor: Color = CAUSE_COLORS.get(cid, Color.GRAY)
+		var llabel: String = CAUSE_LABELS.get(cid, cid)
+		draw_rect(Rect2(legend_x, legend_y, 10.0, 10.0), lcolor, true)
+		draw_string(font, Vector2(legend_x + 14.0, legend_y + 9.0), llabel,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.82, 0.88, 0.94))
+		legend_x += 14.0 + font.get_string_size(
+			llabel, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 20.0
