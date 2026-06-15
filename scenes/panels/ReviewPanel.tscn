@@ -1,20 +1,30 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://creviewpnl0qy1"]
 
-[ext_resource type=Script path=res://scripts/ui/ReviewPanel.gd id=1]
-[ext_resource type=Script path=res://scripts/ui/BarChart.gd id=2]
-[ext_resource type=Script path=res://scripts/ui/FaultTrendChart.gd id=3]
+[ext_resource type="Script" path="res://scripts/ui/ReviewPanel.gd" id="1_rv"]
 
-[node name=ReviewPanel type=Control]
-layout_mode = 6
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rv"]
+bg_color = Color(0.0470588, 0.0627451, 0.117647, 0.988235)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.168627, 0.835294, 1, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="ReviewPanel" type="Control"]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource(1)
+script = ExtResource("1_rv")
 
-[node name=Dimmer type=ColorRect parent=.]
-layout_mode = 6
+[node name="Dimmer" type="ColorRect" parent="."]
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -22,37 +32,57 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.6)
 
-[node name=Center type=CenterContainer parent=Dimmer]
+[node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
-expansion_rect_size_x = 900
-expansion_rect_size_y = 600
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name=Panel type=Panel parent=Center]
-layout_mode = 6
+[node name="Panel" type="Panel" parent="Center"]
+custom_minimum_size = Vector2(960, 640)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_rv")
 
-[node name=Margin type=MarginContainer parent=Center/Panel]
-layout_mode = 6
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
 
-[node name=VBox type=VBoxContainer parent=Center/Panel/Margin]
-layout_mode = 6
-separation = 12
+[node name="VBox" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
 
-[node name=Header type=HBoxContainer parent=Center/Panel/Margin/VBox]
-layout_mode = 6
+[node name="Header" type="HBoxContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/VBox/Header"]
+layout_mode = 2
 size_flags_horizontal = 3
-
-[node name=Title type=Label parent=Center/Panel/Margin/VBox/Header]
-layout_mode = 6
-text = 复盘
-h_size_flags = 3
+text = "复盘"
 vertical_alignment = 1
+theme_override_colors/font_color = Color(0.168627, 0.835294, 1, 1)
+theme_override_font_sizes/font_size = 28
 
-[node name=BtnClose type=Button parent=Center/Panel/Margin/VBox/Header]
-layout_mode = 6
-text = 关闭
+[node name="BtnClose" type="Button" parent="Center/Panel/Margin/VBox/Header"]
+custom_minimum_size = Vector2(100, 38)
+layout_mode = 2
+text = "关闭 ✕"
 
-[node name=Charts type=VBoxContainer parent=Center/Panel/Margin/VBox]
-layout_mode = 6
+[node name="Scroll" type="ScrollContainer" parent="Center/Panel/Margin/VBox"]
+layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-separation = 16
+
+[node name="Charts" type="VBoxContainer" parent="Center/Panel/Margin/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16

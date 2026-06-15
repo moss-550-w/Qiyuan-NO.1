@@ -7,9 +7,8 @@ class_name ReviewPanel
 ##   2. 故障强度变化图（折线图，按轮次）
 ##   3. 仪表趋势对比图（复用 TrendChart）
 
-@onready var _btn_close: Button = /Panel/Margin/VBox/Header/BtnClose
-@onready var _vbox: VBoxContainer = /Panel/Margin/VBox
-@onready var _chart_area: VBoxContainer = /Panel/Margin/VBox/Charts
+@onready var _btn_close: Button = $Center/Panel/Margin/VBox/Header/BtnClose
+@onready var _chart_area: VBoxContainer = $Center/Panel/Margin/VBox/Scroll/Charts
 
 # 图表组件
 var _bar_chart: BarChart = null
@@ -43,15 +42,18 @@ func _render() -> void:
 	# 清理旧图表
 	for c in _chart_area.get_children():
 		c.queue_free()
-	_chart_area.get_children() # ensure cleared
 
 	# 1. 经费分配比例图
 	_bar_chart = BarChart.new()
+	_bar_chart.custom_minimum_size = Vector2(0, 200)
+	_bar_chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_bar_chart.setup(GameState.cumulative_allocation)
 	_chart_area.add_child(_bar_chart)
 
 	# 2. 故障强度变化图
 	_fault_chart = FaultTrendChart.new()
+	_fault_chart.custom_minimum_size = Vector2(0, 220)
+	_fault_chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_fault_chart.setup(GameState.run_log)
 	_chart_area.add_child(_fault_chart)
 

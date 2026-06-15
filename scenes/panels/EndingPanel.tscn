@@ -115,11 +115,11 @@ custom_minimum_size = Vector2(200, 50)
 layout_mode = 2
 text = "再来一局"
 
-
-[node name="BtnReview" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
-custom_minimum_size = Vector2(200, 50)
-layout_mode = 2
-text = 复盘
+[node name="BtnReview" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "复盘"
+
 [node name="BtnMenu" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(200, 50)
 layout_mode = 2

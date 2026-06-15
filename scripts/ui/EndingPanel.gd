@@ -15,6 +15,7 @@ const REVIEW_SCENE := preload("res://scenes/panels/ReviewPanel.tscn")
 @onready var _summary: RichTextLabel = $Center/Panel/Margin/VBox/SummaryLabel
 @onready var _log: RichTextLabel = $Center/Panel/Margin/VBox/LogLabel
 @onready var _btn_replay: Button = $Center/Panel/Margin/VBox/Buttons/BtnReplay
+@onready var _btn_review: Button = $Center/Panel/Margin/VBox/Buttons/BtnReview
 @onready var _btn_menu: Button = $Center/Panel/Margin/VBox/Buttons/BtnMenu
 
 var _anim: TokamakAnimation = null

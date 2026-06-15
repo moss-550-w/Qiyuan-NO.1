@@ -73,8 +73,8 @@ func _draw() -> void:
 		draw_rect(bg_rect, Color(0.20, 0.25, 0.35, 0.5), true)
 
 		# 条填充
+		var fill_width: float = bar_max_width * ratio
 		if ratio > 0.0:
-			var fill_width: float = bar_max_width * ratio
 			var fill_rect := Rect2(label_width, y_pos, fill_width, bar_height)
 			draw_rect(fill_rect, color, true)
 
