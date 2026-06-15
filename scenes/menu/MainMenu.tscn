@@ -142,7 +142,7 @@ text = "设置"
 [node name="BtnTutorial" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(180, 48)
 layout_mode = 2
-text = "鏁欏&#x5B6;︿綔鎴樺焦"
+text = "教学战役"
 
 [node name="BtnRefresh" type="Button" parent="Center/Panel/Margin/VBox/Buttons"]
 custom_minimum_size = Vector2(160, 48)
